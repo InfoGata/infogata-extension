@@ -2,14 +2,14 @@
   "manifest_version": 2,
   "name": "MediaGata Extension",
   "version": "1.0.0",
-  "description": "Extension for AudioGata",
+  "description": "Extension for AudioGata and VideoGata",
   "icons": {
     "64": "icons/64.png",
     "128": "icons/128.png",
     "256": "icons/256.png"
   },
   "background": {
-    "scripts": [ "index.js" ]
+    "scripts": [ "src/index.ts" ]
   },
   "permissions": [
     "<all_urls>",
@@ -17,6 +17,7 @@
     "tabs"
   ],
   "web_accessible_resources": [
-    "hook.js"
+    "src/hook.ts",
+    "src/content.ts"
   ]
 }

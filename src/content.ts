@@ -3,7 +3,7 @@ import { ContentMessageType, HookMessageType } from "./types";
 
 console.log("MediaGata extension initialized");
 
-const hook = browser.extension.getURL("hook.js");
+const hook = browser.extension.getURL("src/hook.js");
 
 const injectScript = (file: string) => {
   let script = document.createElement("script");

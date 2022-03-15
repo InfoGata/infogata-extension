@@ -28,7 +28,7 @@ browser.tabs.onUpdated.addListener(async (_id, _info, tab) => {
       browser.tabs.sendMessage(tab.id, { action: "ping" }).catch(() => {
         // Doesn't contain content script
         // so inject it
-        browser.tabs.executeScript(tab.id, { file: "content.js" });
+        browser.tabs.executeScript(tab.id, { file: "src/content.js" });
       });
     }
   }
