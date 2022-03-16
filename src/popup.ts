@@ -1,10 +1,13 @@
 import { html, render } from "lit-html";
 import { browser } from "webextension-polyfill-ts";
 import { DEFAULT_ORIGIN_LIST } from "./defaultOrigns";
+import { unsafeSVG } from "lit-html/directives/unsafe-svg";
 
-const ICON_ADD = browser.extension.getURL("src/add-icon.svg");
-const ICON_DELETE = browser.extension.getURL("src/delete-icon.svg");
-const ICON_ERROR = browser.extension.getURL("src/error-icon.svg");
+const fs = require("fs");
+
+const ICON_ADD = fs.readFileSync(__dirname + "/add-icon.svg", "utf8");
+const ICON_DELETE = fs.readFileSync(__dirname + "/delete-icon.svg", "utf8");
+const ICON_ERROR = fs.readFileSync(__dirname + "/error-icon.svg", "utf8");
 
 const defaultOrigins = DEFAULT_ORIGIN_LIST;
 let origins = [""];
@@ -76,7 +79,7 @@ const errorField = (error: string) => html`
   ${error.length > 0
     ? html`
         <div class="err">
-          <img src="${ICON_ERROR}" alt="error" />
+          ${unsafeSVG(ICON_ERROR)}
           <span class="err-text"> ${error} </span>
         </div>
       `
@@ -93,7 +96,7 @@ const inputField = (
     <div class="origin-input-wrapper">
       <input id="origin-input" required placeholder="${placeholderURL}" class="origin-input" .value=${inputText} @input=${onInputTextChange}></input>
       <button class="origin-add" type="submit" @click=${onAddClick}>
-        <img src="${ICON_ADD}" alt="add" />
+        ${unsafeSVG(ICON_ADD)}
         <span class="button-text">Add</span>
       </button>
     </div>
@@ -111,7 +114,7 @@ const originList = (
         <li class="origin-list-entry">
           <span class="origin-list-entry-origin">${origin}</span>
           <button class="origin-delete" @click=${() => onDeleteClicked(i)}>
-            <img src="${ICON_DELETE}" alt="delete" />
+            ${unsafeSVG(ICON_DELETE)}
           </button>
         </li>
       `

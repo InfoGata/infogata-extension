@@ -22,9 +22,6 @@
   ],
   "web_accessible_resources": [
     "src/hook.ts",
-    "src/content.ts",
-    "src/add-icon.svg",
-    "src/delete-icon.svg",
-    "src/error-icon.svg"
+    "src/content.ts"
   ]
 }
