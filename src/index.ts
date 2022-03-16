@@ -1,8 +1,10 @@
 import { browser } from "webextension-polyfill-ts";
+import { DEFAULT_ORIGIN_LIST } from "./defaultOrigns";
 import { ContentMessageType } from "./types";
 
 let origins: string[] = [];
-const defaultOrigins = ["http://localhost:3000"];
+const defaultOrigins = DEFAULT_ORIGIN_LIST;
+
 const init = async () => {
   const items = await browser.storage.local.get();
   const strOrigins = items["origins"];
