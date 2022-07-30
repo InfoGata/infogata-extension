@@ -1,6 +1,6 @@
 export const HookMessageType = {
-  Response: "mediagata-extension-response",
-  Request: "mediagata-extension-request",
+  Response: "infogata-extension-response",
+  Request: "infogata-extension-request",
 } as const;
 export type MessageType = typeof HookMessageType[keyof typeof HookMessageType];
 

@@ -1,7 +1,7 @@
 import { HookMessageType } from "./types";
 console.log("Initilizing hook");
 
-(window as any).MediaGata = {
+(window as any).InfoGata = {
   networkRequest: (input: RequestInfo, init?: RequestInit) => {
     return new Promise((resolve, reject) => {
       const onMessage = (e: MessageEvent) => {

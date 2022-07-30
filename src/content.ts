@@ -1,7 +1,7 @@
 import { browser } from "webextension-polyfill-ts";
 import { ContentMessageType, HookMessageType } from "./types";
 
-console.log("MediaGata extension initialized");
+console.log("InfoGata extension initialized");
 
 const hook = browser.extension.getURL("src/hook.js");
 
