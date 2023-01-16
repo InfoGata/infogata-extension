@@ -13,7 +13,7 @@ const defaultOrigins = DEFAULT_ORIGIN_LIST;
 let origins = [""];
 
 let inputText = "";
-let placeholderURL = "https://elijahgreen.gitlab.io/audiogata";
+let placeholderURL = "https://www.audiogata.com";
 let errorMessage = "";
 
 const getOrigins = async () => {

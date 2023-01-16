@@ -52,7 +52,6 @@ const handleRequest = async (input: RequestInfo, init?: RequestInit) => {
 };
 
 browser.runtime.onMessage.addListener((message) => {
-  console.log(message);
   if (message.type === ContentMessageType.NetworkRequest) {
     return handleRequest(message.input, message.init);
   }

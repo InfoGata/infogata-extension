@@ -20,13 +20,11 @@ window.addEventListener("message", async (e: MessageEvent) => {
   }
 
   if (e.data.type === HookMessageType.Request) {
-    console.log(e.data);
     const response = await browser.runtime.sendMessage({
       type: ContentMessageType.NetworkRequest,
       input: e.data.input,
       init: e.data.init,
     });
-    console.log(response);
     window.postMessage({ type: HookMessageType.Response, result: response });
   }
 });

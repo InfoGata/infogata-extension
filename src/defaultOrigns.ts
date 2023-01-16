@@ -1,4 +1,6 @@
 export const DEFAULT_ORIGIN_LIST = [
-  "https://elijahgreen.gitlab.io",
+  "https://www.audiogata.com",
+  "https://www.videogata.com",
+  "https://www.readergata.com",
   "http://localhost:3000",
 ];

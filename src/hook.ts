@@ -8,7 +8,6 @@ console.log("Initilizing hook");
         if (e.source !== window || !e.data) {
           return;
         }
-        console.log(e.data);
         if (e.data.type === HookMessageType.Response) {
           if (e.data.error) {
             reject(e.data.error);
