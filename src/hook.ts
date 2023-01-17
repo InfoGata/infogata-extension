@@ -1,17 +1,28 @@
-import { HookMessageType } from "./types";
+import { ContentMessage, HookMessage } from "./types";
 console.log("Initilizing hook");
+
+let messageId = 0;
+const getMessageId = () => {
+  return ++messageId;
+};
+
+const sendMessage = (message: HookMessage) => {
+  window.postMessage(message, "*");
+};
 
 (window as any).InfoGata = {
   networkRequest: (input: RequestInfo, init?: RequestInit) => {
-    return new Promise((resolve, reject) => {
-      const onMessage = (e: MessageEvent) => {
-        if (e.source !== window || !e.data) {
+    return new Promise((resolve, _reject) => {
+      const uid = getMessageId();
+      const onMessage = (e: MessageEvent<ContentMessage>) => {
+        if (e.source !== window || !e.data || e.data.uid !== uid) {
           return;
         }
-        if (e.data.type === HookMessageType.Response) {
-          if (e.data.error) {
-            reject(e.data.error);
-          }
+
+        if (e.data.type === "infogata-extension-response") {
+          // if (e.data.error) {
+          //   reject(e.data.error);
+          // }
           if (e.data.result) {
             resolve(e.data.result);
           }
@@ -30,7 +41,8 @@ console.log("Initilizing hook");
           body: init.body,
         };
       }
-      window.postMessage({ type: HookMessageType.Request, input, init }, "*");
+
+      sendMessage({ type: "infogata-extension-request", input, init, uid });
     });
   },
 };
