@@ -13,6 +13,21 @@ export type HookMessage = {
 
 export type ContentMessage = {
   type: "infogata-extension-response";
-  result: any;
+  result: NetworkRequest;
   uid: number;
 };
+
+export interface SharedRequest {
+  headers: Record<string, string>;
+  status: number;
+  statusText: string;
+  url: string;
+}
+
+export interface HandleRequestResponse extends SharedRequest {
+  base64: string | ArrayBuffer;
+}
+
+export interface NetworkRequest extends SharedRequest {
+  body: Blob | ArrayBuffer;
+}

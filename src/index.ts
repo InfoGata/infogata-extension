@@ -1,6 +1,10 @@
 import { browser } from "webextension-polyfill-ts";
 import { DEFAULT_ORIGIN_LIST } from "./defaultOrigns";
-import { ContentMessageType } from "./types";
+import {
+  ContentMessageType,
+  HandleRequestResponse,
+  NetworkRequest,
+} from "./types";
 
 let origins: string[] = [];
 const defaultOrigins = DEFAULT_ORIGIN_LIST;
@@ -36,12 +40,25 @@ browser.tabs.onUpdated.addListener(async (_id, _info, tab) => {
   }
 });
 
-const handleRequest = async (input: RequestInfo, init?: RequestInit) => {
+const convertBlobToBase64 = (blob: Blob): Promise<string | ArrayBuffer> =>
+  new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(blob);
+    reader.onloadend = () => {
+      const base64data = reader.result;
+      resolve(base64data);
+    };
+  });
+
+const handleRequest = async (
+  input: RequestInfo,
+  init?: RequestInit
+): Promise<HandleRequestResponse> => {
   const response = await fetch(input, init);
-  const body = await response.blob();
+  const blob = await response.blob();
   const responseHeaders = Object.fromEntries(response.headers.entries());
   const result = {
-    body: body,
+    base64: await convertBlobToBase64(blob),
     headers: responseHeaders,
     status: response.status,
     statusText: response.statusText,
