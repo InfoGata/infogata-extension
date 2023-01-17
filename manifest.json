@@ -1,5 +1,5 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "InfoGata Extension",
   "version": "1.0.0",
   "description": "Extension for Audiogata.com, Videogata.com, and ReaderGata.com",
@@ -11,9 +11,10 @@
     "128": "icons/128.png"
   },
   "background": {
-    "scripts": ["src/index.ts"]
+    "service_worker": "src/index.ts",
+    "type": "module"
   },
-  "browser_action": {
+  "action": {
     "default_title": "InfoGata Extension",
     "default_popup": "src/popup.html"
   },
@@ -22,6 +23,12 @@
       "id": "extension@infogata.com"
     }
   },
-  "permissions": ["<all_urls>", "storage", "tabs"],
-  "web_accessible_resources": ["src/hook.ts", "src/content.ts"]
+  "permissions": ["storage", "tabs", "scripting"],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/hook.ts", "src/content.ts"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "host_permissions": ["<all_urls>"]
 }

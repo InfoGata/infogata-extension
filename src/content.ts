@@ -1,4 +1,4 @@
-import { browser } from "webextension-polyfill-ts";
+import browser from "webextension-polyfill";
 import {
   ContentMessage,
   ContentMessageType,
@@ -9,16 +9,13 @@ import {
 
 console.log("InfoGata extension initialized");
 
-const hook = browser.extension.getURL("src/hook.js");
-
-const injectScript = (file: string) => {
-  let script = document.createElement("script");
-  script.setAttribute("type", "text/javascript");
-  script.setAttribute("src", file);
-  document.documentElement.appendChild(script);
+const injectScript = () => {
+  chrome.runtime.sendMessage({
+    type: "execute_hook",
+  });
 };
 
-injectScript(hook);
+injectScript();
 
 const sendMessage = (message: ContentMessage) => {
   window.postMessage(message);

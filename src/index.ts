@@ -1,10 +1,7 @@
-import { browser } from "webextension-polyfill-ts";
 import { DEFAULT_ORIGIN_LIST } from "./defaultOrigns";
-import {
-  ContentMessageType,
-  HandleRequestResponse,
-  NetworkRequest,
-} from "./types";
+import browser from "webextension-polyfill";
+
+import { ContentMessageType, HandleRequestResponse } from "./types";
 
 let origins: string[] = [];
 const defaultOrigins = DEFAULT_ORIGIN_LIST;
@@ -34,7 +31,10 @@ browser.tabs.onUpdated.addListener(async (_id, _info, tab) => {
       browser.tabs.sendMessage(tab.id, { action: "ping" }).catch(() => {
         // Doesn't contain content script
         // so inject it
-        browser.tabs.executeScript(tab.id, { file: "src/content.js" });
+        browser.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ["src/content.js"],
+        });
       });
     }
   }
@@ -73,6 +73,17 @@ const handleRequest = async (
 browser.runtime.onMessage.addListener((message) => {
   if (message.type === ContentMessageType.NetworkRequest) {
     return handleRequest(message.input, message.init);
+  }
+});
+
+chrome.runtime.onMessage.addListener((message, sender) => {
+  if (message.type && message.type == "execute_hook" && sender.tab.id) {
+    chrome.scripting.executeScript({
+      target: {
+        tabId: sender.tab.id,
+      },
+      files: ["src/hook.js"],
+    });
   }
 });
 
