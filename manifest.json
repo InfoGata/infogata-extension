@@ -17,6 +17,11 @@
     "default_title": "InfoGata Extension",
     "default_popup": "src/popup.html"
   },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "extension@infogata.com"
+    }
+  },
   "permissions": ["<all_urls>", "storage", "tabs"],
   "web_accessible_resources": ["src/hook.ts", "src/content.ts"]
 }
