@@ -54,7 +54,9 @@ const handleRequest = async (
   input: RequestInfo,
   init?: RequestInit
 ): Promise<HandleRequestResponse> => {
-  const response = await fetch(input, init);
+  const newInit = init || {};
+  newInit.credentials = "omit";
+  const response = await fetch(input, newInit);
   const blob = await response.blob();
   const responseHeaders = Object.fromEntries(response.headers.entries());
   const result = {
