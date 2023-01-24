@@ -10,7 +10,7 @@ import {
 console.log("InfoGata extension initialized");
 
 const injectScript = () => {
-  chrome.runtime.sendMessage({
+  browser.runtime.sendMessage({
     type: "execute_hook",
   });
 };

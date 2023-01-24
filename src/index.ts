@@ -31,10 +31,16 @@ browser.tabs.onUpdated.addListener(async (_id, _info, tab) => {
       browser.tabs.sendMessage(tab.id, { action: "ping" }).catch(() => {
         // Doesn't contain content script
         // so inject it
-        browser.scripting.executeScript({
-          target: { tabId: tab.id },
-          files: ["src/content.js"],
-        });
+        if (chrome.scripting) {
+          chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ["up_/src/content.js"],
+          });
+        } else {
+          browser.tabs.executeScript(tab.id, {
+            file: "up_/src/content.js",
+          });
+        }
       });
     }
   }
@@ -76,14 +82,20 @@ browser.runtime.onMessage.addListener((message) => {
   }
 });
 
-chrome.runtime.onMessage.addListener((message, sender) => {
+browser.runtime.onMessage.addListener((message, sender) => {
   if (message.type && message.type == "execute_hook" && sender.tab.id) {
-    chrome.scripting.executeScript({
-      target: {
-        tabId: sender.tab.id,
-      },
-      files: ["src/hook.js"],
-    });
+    if (chrome.scripting) {
+      chrome.scripting.executeScript({
+        target: {
+          tabId: sender.tab.id,
+        },
+        files: ["up_/src/hook.js"],
+      });
+    } else {
+      browser.tabs.executeScript(sender.tab.id, {
+        file: "up_/src/hook.js",
+      });
+    }
   }
 });
 

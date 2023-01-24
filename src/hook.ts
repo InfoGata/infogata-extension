@@ -1,4 +1,5 @@
 import { ContentMessage, HookMessage } from "./types";
+declare const cloneInto: any;
 console.log("Initilizing hook");
 
 let messageId = 0;
@@ -10,7 +11,7 @@ const sendMessage = (message: HookMessage) => {
   window.postMessage(message, "*");
 };
 
-(window as any).InfoGata = {
+const InfoGata = {
   networkRequest: (input: RequestInfo, init?: RequestInit) => {
     return new Promise((resolve, _reject) => {
       const uid = getMessageId();
@@ -46,3 +47,11 @@ const sendMessage = (message: HookMessage) => {
     });
   },
 };
+
+(window as any).InfoGata = InfoGata;
+
+if ((window as any).wrappedJSObject) {
+  (window as any).wrappedJSObject.InfoGata = cloneInto(InfoGata, window, {
+    cloneFunctions: true,
+  });
+}

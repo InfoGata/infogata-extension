@@ -14,9 +14,10 @@
     "webext-prod": {}
   },
   "scripts": {
-    "start": "parcel manifest.json --host localhost --target webext-dev",
-    "build": "parcel build manifest.json --target webext-prod",
-    "create-zip": "npm run build; cd dist/webext-prod; zip -r -FS ../extension.zip *"
+    "start": "parcel firefox/manifest.json --host localhost --target webext-dev",
+    "build:chrome": "parcel build chrome/manifest.json --target webext-prod",
+    "build:firefox": "parcel build firefox/manifest.json --target webext-prod",
+    "create-zip": "npm run build:firefox; cd dist/webext-prod; zip -r -FS ../extension.zip *"
   },
   "devDependencies": {
     "@parcel/config-webextension": "^2.3.2",
@@ -32,7 +33,6 @@
     "sourceDir": "dist/"
   },
   "dependencies": {
-    "axios": "^0.21.1",
     "lit-html": "^2.2.1",
     "webextension-polyfill-ts": "^0.25.0"
   }
