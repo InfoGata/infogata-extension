@@ -36,6 +36,7 @@
     "sourceDir": "dist/"
   },
   "dependencies": {
+    "@emoji-gen/clone-into": "^0.3.0",
     "lit-html": "^2.2.1",
     "webextension-polyfill-ts": "^0.25.0"
   }

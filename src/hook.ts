@@ -1,5 +1,6 @@
 import { ContentMessage, HookMessage } from "./types";
-declare const cloneInto: any;
+import { cloneInto } from "@emoji-gen/clone-into";
+
 console.log("Initilizing hook");
 
 let messageId = 0;
@@ -13,7 +14,7 @@ const sendMessage = (message: HookMessage) => {
 
 const InfoGata = {
   networkRequest: (input: RequestInfo, init?: RequestInit) => {
-    return new Promise((resolve, _reject) => {
+    return new window.Promise((resolve, _reject) => {
       const uid = getMessageId();
       const onMessage = (e: MessageEvent<ContentMessage>) => {
         if (e.source !== window || !e.data || e.data.uid !== uid) {
@@ -22,7 +23,7 @@ const InfoGata = {
 
         if (e.data.type === "infogata-extension-response") {
           if (e.data.result) {
-            resolve(e.data.result);
+            resolve(cloneInto(e.data.result, window));
           }
           window.removeEventListener("message", onMessage);
         }
@@ -47,8 +48,9 @@ const InfoGata = {
 
 (window as any).InfoGata = InfoGata;
 
-// if ((window as any).wrappedJSObject) {
-//   (window as any).wrappedJSObject.InfoGata = cloneInto(InfoGata, window, {
-//     cloneFunctions: true,
-//   });
-// }
+if ((window as any).wrappedJSObject) {
+  (window as any).wrappedJSObject.InfoGata = cloneInto(InfoGata, window, {
+    cloneFunctions: true,
+    wrapReflectors: false,
+  });
+}
