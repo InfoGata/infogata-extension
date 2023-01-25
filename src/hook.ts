@@ -21,9 +21,6 @@ const InfoGata = {
         }
 
         if (e.data.type === "infogata-extension-response") {
-          // if (e.data.error) {
-          //   reject(e.data.error);
-          // }
           if (e.data.result) {
             resolve(e.data.result);
           }
@@ -50,8 +47,8 @@ const InfoGata = {
 
 (window as any).InfoGata = InfoGata;
 
-if ((window as any).wrappedJSObject) {
-  (window as any).wrappedJSObject.InfoGata = cloneInto(InfoGata, window, {
-    cloneFunctions: true,
-  });
-}
+// if ((window as any).wrappedJSObject) {
+//   (window as any).wrappedJSObject.InfoGata = cloneInto(InfoGata, window, {
+//     cloneFunctions: true,
+//   });
+// }
