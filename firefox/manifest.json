@@ -13,9 +13,8 @@
   "background": {
     "scripts": ["../src/index.ts"]
   },
-  "browser_action": {
-    "default_title": "InfoGata Extension",
-    "default_popup": "../src/popup.html"
+  "options_ui": {
+    "page": "../src/options.html"
   },
   "browser_specific_settings": {
     "gecko": {

@@ -14,9 +14,8 @@
     "service_worker": "../src/index.ts",
     "type": "module"
   },
-  "action": {
-    "default_title": "InfoGata Extension",
-    "default_popup": "../src/popup.html"
+  "options_ui": {
+    "page": "../src/options.html"
   },
   "permissions": ["storage", "tabs", "scripting"],
   "web_accessible_resources": [

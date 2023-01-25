@@ -6,4 +6,4 @@ It currently allows the fetching of urls without a cors proxy, which some plugin
 
 ## Credits
 
-Styling and assets of popup.html comes from [hoppscotch/hoppscotch-extension](https://github.com/hoppscotch/hoppscotch-extension)
+Styling and assets of options.html comes from [hoppscotch/hoppscotch-extension](https://github.com/hoppscotch/hoppscotch-extension)

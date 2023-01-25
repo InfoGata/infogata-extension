@@ -125,19 +125,6 @@ const originList = (
 const init = async () => {
   origins = await getOrigins();
 
-  try {
-    const activeTabs = await browser.tabs.query({ active: true });
-    if (activeTabs[0].url) {
-      if (activeTabs[0].url.startsWith("http")) {
-        const url = new URL(activeTabs[0].url);
-        if (url && url.origin) {
-          placeholderURL = url.origin;
-          inputText = url.origin;
-        }
-      }
-    }
-  } catch {}
-
   render(page(), document.body);
 };
 
