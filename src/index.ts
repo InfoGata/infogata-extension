@@ -90,6 +90,7 @@ browser.runtime.onMessage.addListener((message, sender) => {
           tabId: sender.tab.id,
         },
         files: ["up_/src/hook.js"],
+        world: "MAIN",
       });
     } else {
       browser.tabs.executeScript(sender.tab.id, {
