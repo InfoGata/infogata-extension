@@ -76,27 +76,31 @@ const handleRequest = async (
   return Promise.resolve(result);
 };
 
-browser.runtime.onMessage.addListener((message) => {
-  if (message.type === ContentMessageType.NetworkRequest) {
-    return handleRequest(message.input, message.init);
+const loadHook = (tabId: number) => {
+  if (chrome.scripting) {
+    chrome.scripting.executeScript({
+      target: {
+        tabId: tabId,
+      },
+      files: ["up_/src/hook.js"],
+      world: "MAIN",
+    });
+  } else {
+    browser.tabs.executeScript(tabId, {
+      file: "up_/src/hook.js",
+    });
   }
-});
+};
 
 browser.runtime.onMessage.addListener((message, sender) => {
-  if (message.type && message.type == "execute_hook" && sender.tab.id) {
-    if (chrome.scripting) {
-      chrome.scripting.executeScript({
-        target: {
-          tabId: sender.tab.id,
-        },
-        files: ["up_/src/hook.js"],
-        world: "MAIN",
-      });
-    } else {
-      browser.tabs.executeScript(sender.tab.id, {
-        file: "up_/src/hook.js",
-      });
-    }
+  switch (message.type) {
+    case ContentMessageType.NetworkRequest:
+      return handleRequest(message.input, message.init);
+    case ContentMessageType.ExecuteHook:
+      if (sender.tab.id) {
+        loadHook(sender.tab.id);
+      }
+      break;
   }
 });
 

@@ -11,7 +11,7 @@ console.log("InfoGata extension initialized");
 
 const injectScript = () => {
   browser.runtime.sendMessage({
-    type: "execute_hook",
+    type: ContentMessageType.ExecuteHook,
   });
 };
 

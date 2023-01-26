@@ -1,5 +1,6 @@
 export const ContentMessageType = {
   NetworkRequest: "network-request",
+  ExecuteHook: "execute-hook",
 } as const;
 export type ContentMessageType =
   typeof ContentMessageType[keyof typeof ContentMessageType];
