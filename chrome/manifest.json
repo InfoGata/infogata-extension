@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "InfoGata Extension",
   "version": "1.0.0",
-  "description": "Extension for Audiogata.com, Videogata.com, and ReaderGata.com",
+  "description": "Extension for Audiogata, Videogata, and ReaderGata",
   "icons": {
     "16": "../icons/16.png",
     "19": "../icons/19.png",
