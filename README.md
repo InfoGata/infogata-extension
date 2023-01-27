@@ -4,6 +4,20 @@ This extension enables addtional functionality to [audiogata](https://github.com
 
 It currently allows the fetching of urls without a cors proxy, which some plugins need.
 
+### Building
+
+```sh
+npm install
+npm run create-zip:firefox
+```
+
+or
+
+```sh
+npm install
+npm run create-zip:chrome
+```
+
 ## Credits
 
 Styling and assets of options.html comes from [hoppscotch/hoppscotch-extension](https://github.com/hoppscotch/hoppscotch-extension)
