@@ -19,7 +19,7 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "extension@infogata.com"
+      "id": "infogata-extension@infogata.com"
     }
   },
   "permissions": ["<all_urls>", "storage", "tabs"],
