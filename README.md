@@ -4,7 +4,11 @@ This extension enables addtional functionality to [audiogata](https://github.com
 
 It currently allows the fetching of urls without a cors proxy, which some plugins need.
 
-### Building
+## Installation
+
+Firefox: https://addons.mozilla.org/en-US/firefox/addon/infogata-extension/
+
+## Building
 
 ```sh
 npm install
