@@ -1,4 +1,10 @@
-import { ContentMessage, HookMessage } from "./types";
+import {
+  ContentMessage,
+  HookMessage,
+  ManifestAuthentication,
+  NetworkRequest,
+  NetworkRequestOptions,
+} from "./types";
 import { cloneInto } from "@emoji-gen/clone-into";
 
 console.log("Initilizing hook");
@@ -13,7 +19,11 @@ const sendMessage = (message: HookMessage) => {
 };
 
 const InfoGata = {
-  networkRequest: (input: RequestInfo, init?: RequestInit) => {
+  networkRequest: (
+    input: RequestInfo,
+    init?: RequestInit,
+    options?: NetworkRequestOptions
+  ): Promise<NetworkRequest> => {
     return new window.Promise((resolve, _reject) => {
       const uid = getMessageId();
       const onMessage = (e: MessageEvent<ContentMessage>) => {
@@ -41,8 +51,17 @@ const InfoGata = {
         };
       }
 
-      sendMessage({ type: "infogata-extension-request", input, init, uid });
+      sendMessage({
+        type: "infogata-extension-request",
+        input,
+        init,
+        uid,
+        options,
+      });
     });
+  },
+  openLoginWindow: (auth: ManifestAuthentication, pluginId: string) => {
+    sendMessage({ type: "infogata-extension-openlogin-hook", auth, pluginId });
   },
 };
 

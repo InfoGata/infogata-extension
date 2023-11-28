@@ -1,23 +1,30 @@
 import browser from "webextension-polyfill";
 import {
   ContentMessage,
-  ContentMessageType,
   NetworkRequest,
   HookMessage,
   HandleRequestResponse,
+  HookRequest,
+  BackgroundMessage,
+  HookOpenLogin,
+  TabMessage,
 } from "./types";
 
 console.log("InfoGata extension initialized");
 
+const sendMessageToBackground = async (
+  message: BackgroundMessage
+): Promise<any> => {
+  return await browser.runtime.sendMessage(message);
+};
+
 const injectScript = () => {
-  browser.runtime.sendMessage({
-    type: ContentMessageType.ExecuteHook,
-  });
+  sendMessageToBackground({ type: "execute-hook" });
 };
 
 injectScript();
 
-const sendMessage = (message: ContentMessage) => {
+const sendMessageToHook = (message: ContentMessage) => {
   window.postMessage(message);
 };
 
@@ -26,38 +33,63 @@ const base64ToBlob = async (base64: string): Promise<Blob> => {
   return await response.blob();
 };
 
+const makeNetworkRequest = async (request: HookRequest) => {
+  const response: HandleRequestResponse = await sendMessageToBackground({
+    type: "network-request",
+    input: request.input,
+    init: request.init,
+    options: request.options,
+  });
+
+  let body =
+    typeof response.base64 === "string"
+      ? await base64ToBlob(response.base64)
+      : response.base64;
+
+  let result: NetworkRequest = {
+    body: body,
+    headers: response.headers,
+    status: response.status,
+    statusText: response.statusText,
+    url: response.url,
+  };
+
+  sendMessageToHook({
+    type: "infogata-extension-response",
+    result,
+    uid: request.uid,
+  });
+};
+
+const openWindow = (request: HookOpenLogin) => {
+  sendMessageToBackground({
+    type: "open-login",
+    auth: request.auth,
+    pluginId: request.pluginId,
+  });
+};
+
 window.addEventListener("message", async (e: MessageEvent<HookMessage>) => {
   if (e.source !== window || !e.data) {
     return;
   }
 
-  if (e.data.type === "infogata-extension-request") {
-    const response: HandleRequestResponse = await browser.runtime.sendMessage({
-      type: ContentMessageType.NetworkRequest,
-      input: e.data.input,
-      init: e.data.init,
-    });
-
-    let body =
-      typeof response.base64 === "string"
-        ? await base64ToBlob(response.base64)
-        : response.base64;
-
-    let result: NetworkRequest = {
-      body: body,
-      headers: response.headers,
-      status: response.status,
-      statusText: response.statusText,
-      url: response.url,
-    };
-
-    sendMessage({
-      type: "infogata-extension-response",
-      result,
-      uid: e.data.uid,
-    });
+  switch (e.data.type) {
+    case "infogata-extension-openlogin-hook":
+      openWindow(e.data);
+      break;
+    case "infogata-extension-request":
+      await makeNetworkRequest(e.data);
+      break;
   }
 });
 
-// Add listener so that browser.tabs.sendMessage no longer errors
-browser.runtime.onMessage.addListener(() => {});
+browser.runtime.onMessage.addListener((message: TabMessage) => {
+  if (message.type === "notify-login") {
+    window.postMessage({
+      type: "infogata-extension-notify-login",
+      pluginId: message.pluginId,
+      headers: message.headers,
+    });
+  }
+});

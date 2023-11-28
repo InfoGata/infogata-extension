@@ -1,21 +1,64 @@
-export const ContentMessageType = {
-  NetworkRequest: "network-request",
-  ExecuteHook: "execute-hook",
-} as const;
-export type ContentMessageType =
-  typeof ContentMessageType[keyof typeof ContentMessageType];
+import { Tabs } from "webextension-polyfill";
 
-export type HookMessage = {
+export type BackgroundOpenLogin = {
+  type: "open-login";
+  auth: ManifestAuthentication;
+  pluginId: string;
+};
+
+export type BackgroundExecuteHook = {
+  type: "execute-hook";
+};
+
+export type BackgroundNetworkRequest = {
+  type: "network-request";
+  input: RequestInfo;
+  init: RequestInit;
+  options?: NetworkRequestOptions;
+};
+
+export type BackgroundMessage =
+  | BackgroundExecuteHook
+  | BackgroundNetworkRequest
+  | BackgroundOpenLogin;
+
+export type HookRequest = {
   type: "infogata-extension-request";
   input: RequestInfo;
   init: RequestInit;
   uid: number;
+  options?: NetworkRequestOptions;
 };
 
-export type ContentMessage = {
+export type HookOpenLogin = {
+  type: "infogata-extension-openlogin-hook";
+  auth: ManifestAuthentication;
+  pluginId: string;
+};
+
+export type HookMessage = HookRequest | HookOpenLogin;
+
+export type ContentResponse = {
   type: "infogata-extension-response";
   result: NetworkRequest;
   uid: number;
+};
+
+export type ContentMessage = ContentResponse;
+
+export type NotifyLogin = {
+  type: "notify-login";
+  pluginId: string;
+  headers: Record<string, string>;
+};
+
+export type TabMessage = NotifyLogin;
+
+export type LoginMessage = LoginButtonMessage;
+
+export type LoginButtonMessage = {
+  type: "login-button";
+  selector: string;
 };
 
 export interface SharedRequest {
@@ -31,4 +74,32 @@ export interface HandleRequestResponse extends SharedRequest {
 
 export interface NetworkRequest extends SharedRequest {
   body: Blob | ArrayBuffer;
+}
+
+export interface NetworkRequestOptions {
+  auth?: ManifestAuthentication;
+}
+
+export interface ManifestAuthentication {
+  loginUrl: string;
+  cookiesToFind?: string[];
+  loginButton?: string;
+  headersToFind?: string[];
+  completionUrl?: string;
+}
+
+export interface LoginTab {
+  windowTab: Tabs.Tab;
+  senderTab: Tabs.Tab;
+  auth: ManifestAuthentication;
+  foundCookies: boolean;
+  foundHeaders: boolean;
+  foundCompletionUrl: boolean;
+  pluginId: string;
+  headers: Record<string, string>;
+}
+
+export interface ExecuteScriptOptions {
+  world?: chrome.scripting.ExecutionWorld;
+  file?: string;
 }
