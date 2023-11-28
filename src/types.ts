@@ -36,7 +36,12 @@ export type HookOpenLogin = {
   pluginId: string;
 };
 
-export type HookMessage = HookRequest | HookOpenLogin;
+export type HookGetVersion = {
+  type: "infogata-extension-getversion-hook";
+  uid: number;
+};
+
+export type HookMessage = HookRequest | HookOpenLogin | HookGetVersion;
 
 export type ContentResponse = {
   type: "infogata-extension-response";
@@ -44,7 +49,13 @@ export type ContentResponse = {
   uid: number;
 };
 
-export type ContentMessage = ContentResponse;
+export type ContentGetVersion = {
+  type: "infogata-extension-getversion-content";
+  result: string;
+  uid: number;
+};
+
+export type ContentMessage = ContentResponse | ContentGetVersion;
 
 export type NotifyLogin = {
   type: "notify-login";

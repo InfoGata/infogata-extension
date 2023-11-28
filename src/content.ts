@@ -1,4 +1,4 @@
-import browser from "webextension-polyfill";
+import browser, { manifest } from "webextension-polyfill";
 import {
   ContentMessage,
   NetworkRequest,
@@ -8,6 +8,7 @@ import {
   BackgroundMessage,
   HookOpenLogin,
   TabMessage,
+  HookGetVersion,
 } from "./types";
 
 console.log("InfoGata extension initialized");
@@ -69,6 +70,14 @@ const openWindow = (request: HookOpenLogin) => {
   });
 };
 
+const getVersion = (request: HookGetVersion) => {
+  sendMessageToHook({
+    type: "infogata-extension-getversion-content",
+    uid: request.uid,
+    result: browser.runtime.getManifest().version,
+  });
+};
+
 window.addEventListener("message", async (e: MessageEvent<HookMessage>) => {
   if (e.source !== window || !e.data) {
     return;
@@ -80,6 +89,9 @@ window.addEventListener("message", async (e: MessageEvent<HookMessage>) => {
       break;
     case "infogata-extension-request":
       await makeNetworkRequest(e.data);
+      break;
+    case "infogata-extension-getversion-hook":
+      getVersion(e.data);
       break;
   }
 });

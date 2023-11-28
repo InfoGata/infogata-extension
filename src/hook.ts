@@ -19,6 +19,26 @@ const sendMessage = (message: HookMessage) => {
 };
 
 const InfoGata = {
+  getVersion: async (): Promise<string> => {
+    return new window.Promise((resolve, _reject) => {
+      const uid = getMessageId();
+      const onMessage = (e: MessageEvent<ContentMessage>) => {
+        if (e.source !== window || !e.data || e.data.uid !== uid) {
+          return;
+        }
+
+        if (e.data.type === "infogata-extension-getversion-content") {
+          if (e.data.result) {
+            resolve(e.data.result);
+          }
+          window.removeEventListener("message", onMessage);
+        }
+      };
+      window.addEventListener("message", onMessage);
+
+      sendMessage({ type: "infogata-extension-getversion-hook", uid });
+    });
+  },
   networkRequest: (
     input: RequestInfo,
     init?: RequestInit,
