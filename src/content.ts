@@ -1,4 +1,4 @@
-import browser, { manifest } from "webextension-polyfill";
+import browser from "webextension-polyfill";
 import {
   ContentMessage,
   NetworkRequest,

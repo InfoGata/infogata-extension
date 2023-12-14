@@ -19,7 +19,7 @@ const sendMessage = (message: HookMessage) => {
 };
 
 const InfoGata = {
-  getVersion: async (): Promise<string> => {
+  getVersion: (): Promise<string> => {
     return new window.Promise((resolve, _reject) => {
       const uid = getMessageId();
       const onMessage = (e: MessageEvent<ContentMessage>) => {
