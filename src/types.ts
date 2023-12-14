@@ -61,6 +61,7 @@ export type NotifyLogin = {
   type: "notify-login";
   pluginId: string;
   headers: Record<string, string>;
+  domainHeaders: Record<string, Record<string, string>>;
 };
 
 export type TabMessage = NotifyLogin;
@@ -97,6 +98,7 @@ export interface ManifestAuthentication {
   loginButton?: string;
   headersToFind?: string[];
   completionUrl?: string;
+  domainHeadersToFind?: Record<string, string[]>;
 }
 
 export interface LoginTab {
@@ -105,9 +107,11 @@ export interface LoginTab {
   auth: ManifestAuthentication;
   foundCookies: boolean;
   foundHeaders: boolean;
+  foundDomainHeaders: boolean;
   foundCompletionUrl: boolean;
   pluginId: string;
   headers: Record<string, string>;
+  domainHeaders: Record<string, Record<string, string>>;
 }
 
 export interface ExecuteScriptOptions {
