@@ -252,12 +252,19 @@ const openWindow = async (
   const urlPatterns = auth.domainHeadersToFind
     ? Object.keys(auth.domainHeadersToFind).map((d) => `*://*${d}/*`)
     : [];
+  const extraInfo: browser.WebRequest.OnBeforeSendHeadersOptions[] = [
+    "requestHeaders",
+  ];
+  // firefox doesn't have requestHeaders so check if chrome
+  if (chrome.scripting) {
+    extraInfo.push("extraHeaders");
+  }
   browser.webRequest.onBeforeSendHeaders.addListener(
     onBeforeSendHeadersCallback,
     {
       urls: [`${url.origin}/*`, ...urlPatterns],
     },
-    ["requestHeaders", "extraHeaders"]
+    extraInfo
   );
 };
 
