@@ -78,7 +78,7 @@ const getVersion = (request: HookGetVersion) => {
   });
 };
 
-window.addEventListener("message", async (e: MessageEvent<HookMessage>) => {
+const onHookMessage = async (e: MessageEvent<HookMessage>) => {
   if (e.source !== window || !e.data) {
     return;
   }
@@ -94,7 +94,19 @@ window.addEventListener("message", async (e: MessageEvent<HookMessage>) => {
       getVersion(e.data);
       break;
   }
-});
+};
+
+window.addEventListener("message", onHookMessage);
+
+function descructor() {
+  document.removeEventListener(destructionEvent, descructor);
+  window.removeEventListener("message", onHookMessage);
+}
+
+// Unload previous content script
+const destructionEvent = "destructmyextension_" + browser.runtime.id;
+document.dispatchEvent(new CustomEvent(destructionEvent));
+document.addEventListener(destructionEvent, descructor);
 
 browser.runtime.onMessage.addListener((message: TabMessage) => {
   if (message.type === "notify-login") {

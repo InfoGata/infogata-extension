@@ -23,20 +23,6 @@ const init = async () => {
   }
 };
 
-browser.storage.onChanged.addListener((changes) => {
-  if (changes.origins && changes.origins.newValue) {
-    origins = JSON.parse(changes.origins.newValue);
-  }
-});
-
-browser.runtime.onInstalled.addListener(async (details) => {
-  if (details.reason === "install") {
-    await browser.storage.local.set({
-      origins: JSON.stringify(defaultOrigins),
-    });
-  }
-});
-
 const executeScript = (tabId: number, options: ExecuteScriptOptions) => {
   // Chrome
   if (chrome.scripting) {
@@ -51,15 +37,39 @@ const executeScript = (tabId: number, options: ExecuteScriptOptions) => {
   }
 };
 
+const injectContentScript = (tab: Tabs.Tab) => {
+  browser.tabs.sendMessage(tab.id, { action: "ping" }).catch(() => {
+    // Doesn't contain content script
+    // so inject it
+    executeScript(tab.id, { file: "up_/src/content.js" });
+  });
+};
+
+browser.storage.onChanged.addListener((changes) => {
+  if (changes.origins && changes.origins.newValue) {
+    origins = JSON.parse(changes.origins.newValue);
+  }
+});
+
+browser.runtime.onInstalled.addListener(async (details) => {
+  if (details.reason === "install") {
+    await browser.storage.local.set({
+      origins: JSON.stringify(defaultOrigins),
+    });
+  }
+  const urlPatterns = origins.map((o) => `${o}/*`);
+  for (const tab of await browser.tabs.query({ url: urlPatterns })) {
+    if (tab.status !== "loading") {
+      injectContentScript(tab);
+    }
+  }
+});
+
 browser.tabs.onUpdated.addListener(async (_id, _info, tab) => {
   if (tab.status !== "loading") {
     const url = new URL(tab.url);
     if (origins.includes(url.origin)) {
-      browser.tabs.sendMessage(tab.id, { action: "ping" }).catch(() => {
-        // Doesn't contain content script
-        // so inject it
-        executeScript(tab.id, { file: "up_/src/content.js" });
-      });
+      injectContentScript(tab);
     }
   }
 });
