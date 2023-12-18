@@ -40,7 +40,7 @@ const InfoGata = {
     });
   },
   networkRequest: (
-    input: RequestInfo,
+    input: string,
     init?: RequestInit,
     options?: NetworkRequestOptions
   ): Promise<NetworkRequest> => {

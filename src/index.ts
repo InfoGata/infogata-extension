@@ -38,11 +38,15 @@ const executeScript = (tabId: number, options: ExecuteScriptOptions) => {
 };
 
 const injectContentScript = (tab: Tabs.Tab) => {
-  browser.tabs.sendMessage(tab.id, { action: "ping" }).catch(() => {
-    // Doesn't contain content script
-    // so inject it
-    executeScript(tab.id, { file: "up_/src/content.js" });
-  });
+  if (tab.id) {
+    browser.tabs.sendMessage(tab.id, { action: "ping" }).catch(() => {
+      // Doesn't contain content script
+      // so inject it
+      if (tab.id) {
+        executeScript(tab.id, { file: "up_/src/content.js" });
+      }
+    });
+  }
 };
 
 browser.storage.onChanged.addListener((changes) => {
@@ -66,7 +70,7 @@ browser.runtime.onInstalled.addListener(async (details) => {
 });
 
 browser.tabs.onUpdated.addListener(async (_id, _info, tab) => {
-  if (tab.status !== "loading") {
+  if (tab.status !== "loading" && tab.url) {
     const url = new URL(tab.url);
     if (origins.includes(url.origin)) {
       injectContentScript(tab);
@@ -75,14 +79,20 @@ browser.tabs.onUpdated.addListener(async (_id, _info, tab) => {
 });
 
 const sendTabMessage = (message: TabMessage) => {
-  browser.tabs.sendMessage(loginTab.senderTab.id, message);
+  if (loginTab?.senderTab.id) {
+    browser.tabs.sendMessage(loginTab.senderTab.id, message);
+  }
 };
 
 const sendLoginMessage = (message: LoginMessage) => {
-  browser.tabs.sendMessage(loginTab.windowTab.id, message);
+  if (loginTab?.windowTab.id) {
+    browser.tabs.sendMessage(loginTab.windowTab.id, message);
+  }
 };
 
-const convertBlobToBase64 = (blob: Blob): Promise<string | ArrayBuffer> =>
+const convertBlobToBase64 = (
+  blob: Blob
+): Promise<string | ArrayBuffer | null> =>
   new Promise((resolve) => {
     const reader = new FileReader();
     reader.readAsDataURL(blob);
@@ -92,28 +102,38 @@ const convertBlobToBase64 = (blob: Blob): Promise<string | ArrayBuffer> =>
     };
   });
 
-const isAuthorizedDomain = (input: RequestInfo, url?: string): boolean => {
-  if (!url) return false;
+const isAuthorizedDomain = (
+  input: string,
+  loginUrl?: string,
+  domainHeaders?: Record<string, any>
+): boolean => {
+  if (!loginUrl) return false;
 
-  let inputHost: string;
-  const allowedHost = new URL(url).host;
-  if (typeof input === "string") {
-    inputHost = new URL(input).host;
-  } else {
-    // Request
-    inputHost = new URL(input.url).host;
+  const allowedHost = new URL(loginUrl).host;
+  const inputHost = new URL(input).host;
+  if (allowedHost === inputHost) {
+    return true;
   }
-  return allowedHost === inputHost;
+  if (domainHeaders && Object.keys(domainHeaders).length > 0) {
+    return Object.keys(domainHeaders).some((d) => inputHost.endsWith(d));
+  }
+  return false;
 };
 
 const handleRequest = async (
-  input: RequestInfo,
+  input: string,
   init?: RequestInit,
   options?: NetworkRequestOptions
 ): Promise<HandleRequestResponse> => {
   const newInit = init || {};
   // Check if input and domain
-  if (!isAuthorizedDomain(input, options?.auth?.loginUrl)) {
+  if (
+    !isAuthorizedDomain(
+      input,
+      options?.auth?.loginUrl,
+      options?.auth?.domainHeadersToFind
+    )
+  ) {
     newInit.credentials = "omit";
   }
   const response = await fetch(input, newInit);
@@ -137,11 +157,14 @@ const loadHook = (tabId: number) => {
 const openWindow = async (
   auth: ManifestAuthentication,
   pluginId: string,
-  senderTab?: Tabs.Tab
+  senderTab: Tabs.Tab
 ) => {
   const win = await browser.windows.create({
     url: auth.loginUrl,
   });
+  if (!win.tabs) {
+    return;
+  }
   const tab = win.tabs[0];
   loginTab = {
     windowTab: tab,
@@ -162,12 +185,15 @@ const openWindow = async (
   const onBeforeSendHeadersCallback = (
     details: browser.WebRequest.OnBeforeSendHeadersDetailsType
   ) => {
+    if (!loginTab) {
+      return;
+    }
     const detailsUrl = new URL(details.url);
     const urlHost = detailsUrl.host;
-    const headers = details.requestHeaders;
+    const headers = details.requestHeaders!;
     const headerMap = new Map(headers.map((h) => [h.name, h.value]));
 
-    if (!loginTab.foundCompletionUrl) {
+    if (auth.completionUrl && !loginTab.foundCompletionUrl) {
       if (details.url === auth.completionUrl) {
         loginTab.foundCompletionUrl = true;
       } else if (auth.completionUrl.endsWith("?*")) {
@@ -182,7 +208,7 @@ const openWindow = async (
       !loginTab.foundCookies &&
       headerMap.has("Cookie")
     ) {
-      const cookies = headerMap.get("Cookie");
+      const cookies = headerMap.get("Cookie")!;
       const cookieMap = new Map<string, string>(
         cookies
           .split(";")
@@ -205,7 +231,7 @@ const openWindow = async (
           loginTab.domainHeaders[domainToSearch] = {};
           for (const header of domainHeaders) {
             loginTab.domainHeaders[domainToSearch][header] =
-              headerMap.get(header);
+              headerMap.get(header)!;
           }
         }
       }
@@ -220,8 +246,8 @@ const openWindow = async (
     if (auth.headersToFind && !loginTab.foundHeaders) {
       loginTab.foundHeaders = auth.headersToFind.every((h) => headerMap.has(h));
       if (loginTab.foundHeaders) {
-        for (const header of loginTab.auth.headersToFind) {
-          loginTab.headers[header] = headerMap.get(header);
+        for (const header of auth.headersToFind) {
+          loginTab.headers[header] = headerMap.get(header)!;
         }
       }
     }
@@ -244,7 +270,9 @@ const openWindow = async (
         headers: loginTab.headers,
         domainHeaders: loginTab.domainHeaders,
       });
-      browser.tabs.remove(tab.id);
+      if (tab.id) {
+        browser.tabs.remove(tab.id);
+      }
     }
   };
   const onTabRemovedCallback = (tabId: number) => {
@@ -283,12 +311,16 @@ browser.runtime.onMessage.addListener((message: BackgroundMessage, sender) => {
     case "network-request":
       return handleRequest(message.input, message.init, message.options);
     case "execute-hook":
-      if (sender.tab.id) {
-        loadHook(sender.tab.id);
+      if (sender.tab) {
+        if (sender.tab.id) {
+          loadHook(sender.tab.id);
+        }
       }
       break;
     case "open-login":
-      openWindow(message.auth, message.pluginId, sender.tab);
+      if (sender.tab) {
+        openWindow(message.auth, message.pluginId, sender.tab);
+      }
   }
 });
 

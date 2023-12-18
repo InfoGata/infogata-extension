@@ -5,18 +5,11 @@
     "noImplicitAny": true,
     "removeComments": true,
     "preserveConstEnums": true,
+    "strict": true,
     "outDir": "./dist",
-    "types": [ "chrome", "node" ],
-    "lib": [
-      "es2019",
-      "dom",
-      "dom.iterable"
-    ],
+    "types": ["chrome", "node"],
+    "lib": ["es2019", "dom", "dom.iterable"]
   },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }

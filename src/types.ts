@@ -12,8 +12,8 @@ export type BackgroundExecuteHook = {
 
 export type BackgroundNetworkRequest = {
   type: "network-request";
-  input: RequestInfo;
-  init: RequestInit;
+  input: string;
+  init?: RequestInit;
   options?: NetworkRequestOptions;
 };
 
@@ -24,8 +24,8 @@ export type BackgroundMessage =
 
 export type HookRequest = {
   type: "infogata-extension-request";
-  input: RequestInfo;
-  init: RequestInit;
+  input: string;
+  init?: RequestInit;
   uid: number;
   options?: NetworkRequestOptions;
 };
@@ -81,11 +81,11 @@ export interface SharedRequest {
 }
 
 export interface HandleRequestResponse extends SharedRequest {
-  base64: string | ArrayBuffer;
+  base64: string | ArrayBuffer | null;
 }
 
 export interface NetworkRequest extends SharedRequest {
-  body: Blob | ArrayBuffer;
+  body: Blob | ArrayBuffer | null;
 }
 
 export interface NetworkRequestOptions {
@@ -116,5 +116,5 @@ export interface LoginTab {
 
 export interface ExecuteScriptOptions {
   world?: chrome.scripting.ExecutionWorld;
-  file?: string;
+  file: string;
 }
