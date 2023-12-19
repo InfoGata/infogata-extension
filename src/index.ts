@@ -23,9 +23,12 @@ const init = async () => {
   }
 };
 
+// Current firefox version is manifest v2
+// so check if chrome.scripting exists
+const isChrome = !!chrome.scripting;
+
 const executeScript = (tabId: number, options: ExecuteScriptOptions) => {
-  // Chrome
-  if (chrome.scripting) {
+  if (isChrome) {
     return chrome.scripting.executeScript({
       target: { tabId: tabId },
       files: [options.file],
@@ -293,13 +296,14 @@ const openWindow = async (
   const extraInfo: browser.WebRequest.OnBeforeSendHeadersOptions[] = [
     "requestHeaders",
   ];
-  // firefox doesn't have requestHeaders so check if chrome
-  if (chrome.scripting) {
+  // firefox doesn't have extraHeaders so check if chrome
+  if (isChrome) {
     extraInfo.push("extraHeaders");
   }
   browser.webRequest.onBeforeSendHeaders.addListener(
     onBeforeSendHeadersCallback,
     {
+      tabId: tab.id,
       urls: [`${url.origin}/*`, ...urlPatterns],
     },
     extraInfo
@@ -323,5 +327,54 @@ browser.runtime.onMessage.addListener((message: BackgroundMessage, sender) => {
       }
   }
 });
+
+// Remove origin header if it's coming from this extension when making
+// requests to youtube
+if (!isChrome) {
+  browser.webRequest.onBeforeSendHeaders.addListener(
+    (details) => {
+      for (let i = 0; i < details.requestHeaders!.length; i++) {
+        const header = details.requestHeaders![i];
+        if (
+          header.name === "Origin" &&
+          header.value?.indexOf("moz-extension://") === 0
+        ) {
+          details.requestHeaders!.splice(i, 1);
+          break;
+        }
+      }
+      return { requestHeaders: details.requestHeaders };
+    },
+    {
+      urls: ["*://*.youtube.com/*"],
+    },
+    ["requestHeaders", "blocking"]
+  );
+} else {
+  chrome.declarativeNetRequest.updateDynamicRules({
+    removeRuleIds: [1],
+    addRules: [
+      {
+        id: 1,
+        action: {
+          type: chrome.declarativeNetRequest.RuleActionType.MODIFY_HEADERS,
+          requestHeaders: [
+            {
+              header: "origin",
+              operation: chrome.declarativeNetRequest.HeaderOperation.REMOVE,
+            },
+          ],
+        },
+        condition: {
+          initiatorDomains: [chrome.runtime.id],
+          urlFilter: "||youtube.com",
+          resourceTypes: [
+            chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST,
+          ],
+        },
+      },
+    ],
+  });
+}
 
 init();

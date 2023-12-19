@@ -18,7 +18,13 @@
   "options_ui": {
     "page": "../src/options.html"
   },
-  "permissions": ["storage", "tabs", "scripting", "webRequest"],
+  "permissions": [
+    "storage",
+    "tabs",
+    "scripting",
+    "webRequest",
+    "declarativeNetRequest"
+  ],
   "web_accessible_resources": [
     {
       "resources": [

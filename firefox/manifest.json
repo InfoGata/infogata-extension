@@ -22,7 +22,13 @@
       "id": "infogata-extension@infogata.com"
     }
   },
-  "permissions": ["<all_urls>", "storage", "tabs", "webRequest"],
+  "permissions": [
+    "<all_urls>",
+    "storage",
+    "tabs",
+    "webRequest",
+    "webRequestBlocking"
+  ],
   "web_accessible_resources": [
     "../src/hook.ts",
     "../src/content.ts",
