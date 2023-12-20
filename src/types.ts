@@ -55,7 +55,17 @@ export type ContentGetVersion = {
   uid: number;
 };
 
-export type ContentMessage = ContentResponse | ContentGetVersion;
+export type ContentNotifyLogin = {
+  type: "infogata-extension-notify-login";
+  pluginId: string;
+  headers: Record<string, string>;
+  domainHeaders: Record<string, Record<string, string>>;
+};
+
+export type ContentMessage =
+  | ContentResponse
+  | ContentGetVersion
+  | ContentNotifyLogin;
 
 export type NotifyLogin = {
   type: "notify-login";

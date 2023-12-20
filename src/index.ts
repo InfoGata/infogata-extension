@@ -278,15 +278,6 @@ const openWindow = async (
       }
     }
   };
-  const onTabRemovedCallback = (tabId: number) => {
-    if (tabId === tab.id) {
-      browser.webRequest.onBeforeSendHeaders.removeListener(
-        onBeforeSendHeadersCallback
-      );
-    }
-    browser.tabs.onRemoved.removeListener(onTabRemovedCallback);
-  };
-  browser.tabs.onRemoved.addListener(onTabRemovedCallback);
 
   const url = new URL(auth.loginUrl);
   // keys formatted as .domain.tld

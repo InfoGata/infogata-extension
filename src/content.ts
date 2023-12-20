@@ -110,10 +110,11 @@ document.addEventListener(destructionEvent, descructor);
 
 browser.runtime.onMessage.addListener((message: TabMessage) => {
   if (message.type === "notify-login") {
-    window.postMessage({
+    sendMessageToHook({
       type: "infogata-extension-notify-login",
       pluginId: message.pluginId,
       headers: message.headers,
+      domainHeaders: message.domainHeaders,
     });
   }
 });
