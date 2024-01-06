@@ -2,7 +2,10 @@
 
 This extension enables addtional functionality to [audiogata](https://github.com/InfoGata/audiogata), [videogata](https://github.com/InfoGata/videogata), and [readergata](https://gitlab.com/elijahgreen/readergata) plugins.
 
-It currently allows the fetching of urls without a cors proxy, which some plugins need.
+It currently enables the following:
+
+1. Allows the plugins to fetch urls without a cors proxy, which some plugins need.
+2. Allows some plugins to make authenticated requests to websites if the user enables the plugin to.
 
 ## Installation
 
