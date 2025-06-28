@@ -7,7 +7,7 @@
     "preserveConstEnums": true,
     "strict": true,
     "outDir": "./dist",
-    "types": ["chrome", "node"],
+    "types": ["chrome", "node", "jest"],
     "lib": ["es2019", "dom", "dom.iterable"]
   },
   "include": ["src/**/*"],
