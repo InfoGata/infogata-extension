@@ -1,6 +1,7 @@
 import { html, render } from "lit-html";
 import { unsafeSVG } from "lit-html/directives/unsafe-svg.js";
 import { DEFAULT_ORIGIN_LIST } from "./defaultOrigns";
+import { getActiveTabOrigin } from "./tab-utils";
 
 // Import CSS
 import "./popup.css";
@@ -127,21 +128,13 @@ const originList = (
   </ul>
 `;
 
+
 const init = async () => {
   origins = await getOrigins();
 
-  // Get current active tab's origin for placeholder
-  try {
-    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-    if (tabs[0]?.url && tabs[0].url.startsWith('http')) {
-      const currentURL = new URL(tabs[0].url);
-      placeholderURL = currentURL.origin;
-      inputText = currentURL.origin;
-    }
-  } catch (e) {
-    // Keep default placeholder if unable to get active tab
-    console.log("Unable to get active tab origin:", e);
-  }
+  const { placeholderURL: newPlaceholder, inputText: newInputText } = await getActiveTabOrigin();
+  placeholderURL = newPlaceholder;
+  inputText = newInputText;
 
   render(page(), document.body);
 };
