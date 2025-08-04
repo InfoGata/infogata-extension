@@ -19,16 +19,31 @@ Chrome:
 
 ## Building
 
+### Development
 ```sh
 npm install
-npm run create-zip:firefox
+npm run dev            # Chrome development server
+npm run dev:firefox    # Firefox development server
 ```
 
-or
-
+### Production builds
 ```sh
 npm install
-npm run create-zip:chrome
+npm run build          # Build for Chrome
+npm run build:firefox  # Build for Firefox
+```
+
+### Create distribution packages
+```sh
+npm run zip            # Create Chrome extension zip
+npm run zip:firefox    # Create Firefox extension zip
+```
+
+### Testing
+```sh
+npm test               # Run Jest tests
+npm run test:watch     # Run tests in watch mode
+npm run test:coverage  # Run tests with coverage
 ```
 
 ## Credits

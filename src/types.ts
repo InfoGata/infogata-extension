@@ -1,5 +1,3 @@
-import { Tabs } from "webextension-polyfill";
-
 export type BackgroundOpenLogin = {
   type: "open-login";
   auth: ManifestAuthentication;
@@ -112,8 +110,8 @@ export interface ManifestAuthentication {
 }
 
 export interface LoginTab {
-  windowTab: Tabs.Tab;
-  senderTab: Tabs.Tab;
+  windowTab: Browser.tabs.Tab;
+  senderTab: Browser.tabs.Tab;
   auth: ManifestAuthentication;
   foundCookies: boolean;
   foundHeaders: boolean;

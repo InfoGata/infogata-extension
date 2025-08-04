@@ -1,13 +1,19 @@
 import { html, render } from "lit-html";
+import { unsafeSVG } from "lit-html/directives/unsafe-svg.js";
 import { browser } from "webextension-polyfill-ts";
 import { DEFAULT_ORIGIN_LIST } from "./defaultOrigns";
-import { unsafeSVG } from "lit-html/directives/unsafe-svg.js";
 
-const fs = require("fs");
+// Import CSS
+import "./options.css";
 
-const ICON_ADD = fs.readFileSync(__dirname + "/add-icon.svg", "utf8");
-const ICON_DELETE = fs.readFileSync(__dirname + "/delete-icon.svg", "utf8");
-const ICON_ERROR = fs.readFileSync(__dirname + "/error-icon.svg", "utf8");
+// Import SVG assets
+import addIconSvg from "./add-icon.svg?raw";
+import deleteIconSvg from "./delete-icon.svg?raw";
+import errorIconSvg from "./error-icon.svg?raw";
+
+const ICON_ADD = addIconSvg;
+const ICON_DELETE = deleteIconSvg;
+const ICON_ERROR = errorIconSvg;
 
 const defaultOrigins = DEFAULT_ORIGIN_LIST;
 let origins = [""];
@@ -19,7 +25,7 @@ let errorMessage = "";
 const getOrigins = async () => {
   const items = await browser.storage.local.get(["origins"]);
 
-  if (!items) {
+  if (!items || !items.origins) {
     await storeOrigins(defaultOrigins);
     return defaultOrigins;
   }

@@ -1,15 +1,6 @@
 {
+  "extends": "./.wxt/tsconfig.json",
   "compilerOptions": {
-    "module": "CommonJS",
-    "esModuleInterop": true,
-    "noImplicitAny": true,
-    "removeComments": true,
-    "preserveConstEnums": true,
-    "strict": true,
-    "outDir": "./dist",
-    "types": ["chrome", "node", "jest"],
-    "lib": ["es2019", "dom", "dom.iterable"]
+    "allowImportingTsExtensions": true,
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"]
 }
