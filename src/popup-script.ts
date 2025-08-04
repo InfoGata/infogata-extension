@@ -6,9 +6,9 @@ import { DEFAULT_ORIGIN_LIST } from "./defaultOrigns";
 import "./popup.css";
 
 // Import SVG assets
-import addIconSvg from "./add-icon.svg?raw";
-import deleteIconSvg from "./delete-icon.svg?raw";
-import errorIconSvg from "./error-icon.svg?raw";
+import addIconSvg from "../assets/add-icon.svg?raw";
+import deleteIconSvg from "../assets/delete-icon.svg?raw";
+import errorIconSvg from "../assets/error-icon.svg?raw";
 
 const ICON_ADD = addIconSvg;
 const ICON_DELETE = deleteIconSvg;
