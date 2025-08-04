@@ -130,6 +130,19 @@ const originList = (
 const init = async () => {
   origins = await getOrigins();
 
+  // Get current active tab's origin for placeholder
+  try {
+    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+    if (tabs[0]?.url) {
+      const currentURL = new URL(tabs[0].url);
+      placeholderURL = currentURL.origin;
+      inputText = currentURL.origin;
+    }
+  } catch (e) {
+    // Keep default placeholder if unable to get active tab
+    console.log("Unable to get active tab origin:", e);
+  }
+
   render(page(), document.body);
 };
 
