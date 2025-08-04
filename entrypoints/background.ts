@@ -24,19 +24,16 @@ export default defineBackground(() => {
     }
   };
 
-  // Current firefox version is manifest v2
-  // so check if chrome.scripting exists
-  const isChrome = !!chrome.scripting;
+  const isMv3 = import.meta.env.MANIFEST_VERSION === 3;
 
   const executeScript = (tabId: number, options: ExecuteScriptOptions) => {
-    if (isChrome) {
+    if (isMv3) {
       return chrome.scripting.executeScript({
         target: { tabId: tabId },
         files: [options.file],
         world: options.world,
       });
     } else {
-      // Firefox
       return browser.tabs.executeScript(tabId, { file: options.file });
     }
   };
@@ -289,8 +286,7 @@ export default defineBackground(() => {
     const extraInfo: Browser.webRequest.OnBeforeSendHeadersOptions[] = [
       "requestHeaders" as Browser.webRequest.OnBeforeSendHeadersOptions
     ];
-    // firefox doesn't have extraHeaders so check if chrome
-    if (isChrome) {
+    if (isMv3) {
       extraInfo.push("extraHeaders" as Browser.webRequest.OnBeforeSendHeadersOptions);
     }
     browser.webRequest.onBeforeSendHeaders.addListener(
@@ -333,7 +329,7 @@ export default defineBackground(() => {
 
   // Remove origin header if it's coming from this extension when making
   // requests to youtube
-  if (!isChrome) {
+  if (!isMv3) {
     browser.webRequest.onBeforeSendHeaders.addListener(
       (details) => {
         for (let i = 0; i < details.requestHeaders!.length; i++) {

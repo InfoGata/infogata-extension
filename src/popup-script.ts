@@ -1,10 +1,9 @@
 import { html, render } from "lit-html";
 import { unsafeSVG } from "lit-html/directives/unsafe-svg.js";
-import { browser } from "webextension-polyfill-ts";
 import { DEFAULT_ORIGIN_LIST } from "./defaultOrigns";
 
 // Import CSS
-import "./options.css";
+import "./popup.css";
 
 // Import SVG assets
 import addIconSvg from "./add-icon.svg?raw";
