@@ -133,7 +133,7 @@ const init = async () => {
   // Get current active tab's origin for placeholder
   try {
     const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-    if (tabs[0]?.url) {
+    if (tabs[0]?.url && tabs[0].url.startsWith('http')) {
       const currentURL = new URL(tabs[0].url);
       placeholderURL = currentURL.origin;
       inputText = currentURL.origin;
