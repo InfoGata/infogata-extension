@@ -13,3 +13,8 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+// Type declaration for @emoji-gen/clone-into
+declare module '@emoji-gen/clone-into' {
+  export function cloneInto<T>(obj: T, targetWindow: Window, options?: { cloneFunctions?: boolean; wrapReflectors?: boolean }): T;
+}
