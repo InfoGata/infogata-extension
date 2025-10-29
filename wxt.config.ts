@@ -1,6 +1,10 @@
 import { defineConfig } from 'wxt';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
+  vite: () => ({
+    plugins: [tailwindcss()],
+  }),
   manifest: {
     name: 'InfoGata Extension',
     description: 'Extension for Audiogata, Videogata, and ReaderGata',

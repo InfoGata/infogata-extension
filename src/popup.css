@@ -122,3 +122,34 @@ body {
   flex: 1;
   display: flex;
 }
+
+.debug-button-wrapper {
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.debug-button {
+  width: 100%;
+  cursor: pointer;
+  background-color: #4285f4;
+  color: white;
+  border-radius: 4px;
+  padding: 10px 16px;
+  outline: none;
+  font-weight: 500;
+  border: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Inter", sans-serif;
+  font-size: 0.95rem;
+  transition: background-color 0.2s;
+}
+
+.debug-button:hover {
+  background-color: #3367d6;
+}
+
+.debug-button:active {
+  background-color: #2952b3;
+}

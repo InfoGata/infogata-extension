@@ -36,6 +36,10 @@ const storeOrigins = async (origins: string[]) => {
   await browser.storage.local.set({ origins: JSON.stringify(origins) });
 };
 
+const onOpenDebugPage = () => {
+  browser.tabs.create({ url: browser.runtime.getURL("/debug.html") });
+};
+
 const onAddClick = (event: MouseEvent) => {
   event.preventDefault();
 
@@ -77,8 +81,17 @@ const onDeleteOriginClicked = async (index: number) => {
 };
 
 const page = () => html`
+  ${import.meta.env.DEV ? debugButton(onOpenDebugPage) : ""}
   ${inputField(inputText, onInputTextChange, onAddClick)}
   ${errorField(errorMessage)} ${originList(origins, onDeleteOriginClicked)}
+`;
+
+const debugButton = (onClick: () => void) => html`
+  <div class="debug-button-wrapper">
+    <button class="debug-button" @click=${onClick}>
+      <span>🔧 Open Debug Page</span>
+    </button>
+  </div>
 `;
 
 const errorField = (error: string) => html`
