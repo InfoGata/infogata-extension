@@ -137,7 +137,7 @@ describe('popup-script initialization', () => {
     
     expect(fakeBrowser.storage.local.get).toHaveBeenCalledWith(['origins']);
     expect(fakeBrowser.storage.local.set).toHaveBeenCalledWith({
-      origins: JSON.stringify(['https://www.audiogata.com', 'https://www.videogata.com', 'https://www.readergata.com'])
+      origins: JSON.stringify(['https://www.audiogata.com', 'https://www.videogata.com', 'https://www.readergata.com', 'https://www.socialgata.com'])
     });
   });
 });

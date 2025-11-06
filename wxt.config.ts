@@ -7,7 +7,7 @@ export default defineConfig({
   }),
   manifest: {
     name: 'InfoGata Extension',
-    description: 'Extension for Audiogata, Videogata, and ReaderGata',
+    description: 'Extension for Audiogata, Videogata, ReaderGata, and SocialGata',
     version: '1.1.0',
     permissions: ['storage', 'tabs', 'scripting', 'webRequest', 'declarativeNetRequest'],
     host_permissions: ['<all_urls>'],

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-InfoGata Extension is a cross-browser extension that enhances AudioGata, VideoGata, and ReaderGata applications by providing:
+InfoGata Extension is a cross-browser extension that enhances AudioGata, VideoGata, ReaderGata, and SocialGata applications by providing:
 - CORS-free network requests for plugins
 - Authenticated requests to websites with user permission
 

@@ -1,6 +1,6 @@
 # InfoGata Browser Extension
 
-This extension enables addtional functionality to [audiogata](https://github.com/InfoGata/audiogata), [videogata](https://github.com/InfoGata/videogata), and [readergata](https://gitlab.com/elijahgreen/readergata) plugins.
+This extension enables addtional functionality to [audiogata](https://github.com/InfoGata/audiogata), [videogata](https://github.com/InfoGata/videogata), [readergata](https://github.com/InfoGata/readergata), [socialgata](https://github.com/InfoGata/socialgata) plugins.
 
 It currently enables the following:
 
