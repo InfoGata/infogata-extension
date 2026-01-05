@@ -6,11 +6,18 @@ export default defineConfig({
   vite: () => ({
     plugins: [tailwindcss()],
   }),
-  manifest: {
+  manifest: ({ browser }) => ({
     name: 'InfoGata Extension',
     description: 'Extension for Audiogata, Videogata, ReaderGata, and SocialGata',
     version: '1.1.0',
-    permissions: ['storage', 'tabs', 'scripting', 'webRequest', 'declarativeNetRequest'],
+    permissions: [
+      'storage',
+      'tabs',
+      'scripting',
+      'webRequest',
+      'declarativeNetRequest',
+      ...(browser === 'firefox' ? ['webRequestBlocking'] : []),
+    ],
     host_permissions: ['<all_urls>'],
     action: {
       default_popup: 'popup.html',
@@ -21,7 +28,7 @@ export default defineConfig({
         matches: ['<all_urls>'],
       },
     ],
-  },
+  }),
   experimental: {
     entrypointLoader: true,
   },
