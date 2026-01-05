@@ -19,7 +19,7 @@ export default defineBackground(() => {
   const init = async () => {
     const items = await browser.storage.local.get();
     const strOrigins = items["origins"];
-    if (strOrigins) {
+    if (typeof strOrigins === "string") {
       origins = JSON.parse(strOrigins);
     }
   };
@@ -51,7 +51,7 @@ export default defineBackground(() => {
   };
 
   browser.storage.onChanged.addListener((changes) => {
-    if (changes.origins && changes.origins.newValue) {
+    if (changes.origins && typeof changes.origins.newValue === "string") {
       origins = JSON.parse(changes.origins.newValue);
     }
   });
@@ -163,7 +163,7 @@ export default defineBackground(() => {
     const win = await browser.windows.create({
       url: auth.loginUrl,
     });
-    if (!win.tabs) {
+    if (!win || !win.tabs) {
       return;
     }
     const tab = win.tabs[0];

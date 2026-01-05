@@ -29,7 +29,7 @@ const getOrigins = async () => {
     await storeOrigins(defaultOrigins);
     return defaultOrigins;
   }
-  return JSON.parse(items.origins);
+  return JSON.parse(items.origins as string);
 };
 
 const storeOrigins = async (origins: string[]) => {
@@ -37,7 +37,8 @@ const storeOrigins = async (origins: string[]) => {
 };
 
 const onOpenDebugPage = () => {
-  browser.tabs.create({ url: browser.runtime.getURL("/debug.html") });
+  const getURL = browser.runtime.getURL as (path: string) => string;
+  browser.tabs.create({ url: getURL("/debug.html") });
 };
 
 const onAddClick = (event: MouseEvent) => {

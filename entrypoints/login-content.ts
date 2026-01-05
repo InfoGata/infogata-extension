@@ -1,4 +1,4 @@
-import { LoginMessage } from "@/types";
+import { LoginMessage } from "@/src/types";
 
 export default defineUnlistedScript(() => {
   browser.runtime.onMessage.addListener((message: LoginMessage) => {
