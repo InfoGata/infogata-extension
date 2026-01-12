@@ -50,9 +50,25 @@ export default defineBackground(() => {
     }
   };
 
-  browser.storage.onChanged.addListener((changes) => {
+  browser.storage.onChanged.addListener(async (changes) => {
     if (changes.origins && typeof changes.origins.newValue === "string") {
-      origins = JSON.parse(changes.origins.newValue);
+      const newOrigins: string[] = JSON.parse(changes.origins.newValue);
+      const oldOrigins = origins;
+      origins = newOrigins;
+
+      // Find newly added origins
+      const addedOrigins = newOrigins.filter((o) => !oldOrigins.includes(o));
+
+      if (addedOrigins.length > 0) {
+        // Query tabs matching the new origins and inject content scripts
+        const urlPatterns = addedOrigins.map((o) => `${o}/*`);
+        const tabs = await browser.tabs.query({ url: urlPatterns });
+        for (const tab of tabs) {
+          if (tab.status !== "loading") {
+            injectContentScript(tab);
+          }
+        }
+      }
     }
   });
 
