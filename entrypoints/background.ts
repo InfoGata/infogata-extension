@@ -7,6 +7,7 @@ import {
   LoginTab,
   ManifestAuthentication,
   NetworkRequestOptions,
+  SerializableRequestInit,
   TabMessage,
 } from "../src/types";
 
@@ -137,12 +138,36 @@ export default defineBackground(() => {
     return false;
   };
 
+  /**
+   * Convert a base64 data URL to a Blob
+   */
+  const base64ToBlob = async (base64: string): Promise<Blob> => {
+    const response = await fetch(base64);
+    return await response.blob();
+  };
+
   const handleRequest = async (
     input: string,
-    init?: RequestInit,
+    init?: SerializableRequestInit,
     options?: NetworkRequestOptions
   ): Promise<HandleRequestResponse> => {
-    const newInit = init || {};
+    const newInit: RequestInit = {};
+
+    // Copy over serializable properties
+    if (init) {
+      if (init.headers) newInit.headers = init.headers;
+      if (init.mode) newInit.mode = init.mode;
+      if (init.method) newInit.method = init.method;
+      if (init.credentials) newInit.credentials = init.credentials;
+
+      // Decode base64 body if needed
+      if (init.bodyIsBase64 && typeof init.body === "string") {
+        newInit.body = await base64ToBlob(init.body);
+      } else if (init.body) {
+        newInit.body = init.body;
+      }
+    }
+
     // Check if input and domain
     if (
       !isAuthorizedDomain(

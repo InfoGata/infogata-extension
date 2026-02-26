@@ -8,10 +8,19 @@ export type BackgroundExecuteHook = {
   type: "execute-hook";
 };
 
+export interface SerializableRequestInit {
+  headers?: HeadersInit;
+  mode?: RequestMode;
+  method?: string;
+  credentials?: RequestCredentials;
+  body?: string;
+  bodyIsBase64?: boolean;
+}
+
 export type BackgroundNetworkRequest = {
   type: "network-request";
   input: string;
-  init?: RequestInit;
+  init?: SerializableRequestInit;
   options?: NetworkRequestOptions;
 };
 
@@ -23,7 +32,7 @@ export type BackgroundMessage =
 export type HookRequest = {
   type: "infogata-extension-request";
   input: string;
-  init?: RequestInit;
+  init?: SerializableRequestInit;
   uid: number;
   options?: NetworkRequestOptions;
 };
