@@ -27,7 +27,12 @@ export type BackgroundNetworkRequest = {
 export type BackgroundMessage =
   | BackgroundExecuteHook
   | BackgroundNetworkRequest
-  | BackgroundOpenLogin;
+  | BackgroundOpenLogin
+  | BackgroundRegisterRedirects
+  | BackgroundDismissRedirect
+  | BackgroundGetRedirectRules
+  | BackgroundSetRedirectEnabled
+  | BackgroundUndismissRedirect;
 
 export type HookRequest = {
   type: "infogata-extension-request";
@@ -48,7 +53,7 @@ export type HookGetVersion = {
   uid: number;
 };
 
-export type HookMessage = HookRequest | HookOpenLogin | HookGetVersion;
+export type HookMessage = HookRequest | HookOpenLogin | HookGetVersion | HookRegisterRedirects;
 
 export type ContentResponse = {
   type: "infogata-extension-response";
@@ -81,7 +86,7 @@ export type NotifyLogin = {
   domainHeaders: Record<string, Record<string, string>>;
 };
 
-export type TabMessage = NotifyLogin;
+export type TabMessage = NotifyLogin | TabShowRedirectBanner;
 
 export type LoginMessage = LoginButtonMessage;
 
@@ -135,3 +140,52 @@ export interface ExecuteScriptOptions {
   world?: chrome.scripting.ExecutionWorld;
   file: string;
 }
+
+export interface SiteRedirectRule {
+  pluginId: string;
+  pluginName: string;
+  appName: string;
+  appOrigin: string;
+  siteMatchPatterns: string[];
+  redirectPath: string;
+}
+
+export interface RedirectPreferences {
+  globalEnabled: boolean;
+  dismissedRuleKeys: string[];
+}
+
+export type HookRegisterRedirects = {
+  type: "infogata-extension-register-redirects";
+  rules: SiteRedirectRule[];
+};
+
+export type BackgroundRegisterRedirects = {
+  type: "register-redirects";
+  rules: SiteRedirectRule[];
+};
+
+export type BackgroundDismissRedirect = {
+  type: "dismiss-redirect";
+  ruleKey: string;
+};
+
+export type BackgroundGetRedirectRules = {
+  type: "get-redirect-rules";
+};
+
+export type BackgroundSetRedirectEnabled = {
+  type: "set-redirect-enabled";
+  enabled: boolean;
+};
+
+export type BackgroundUndismissRedirect = {
+  type: "undismiss-redirect";
+  ruleKey: string;
+};
+
+export type TabShowRedirectBanner = {
+  type: "show-redirect-banner";
+  rule: SiteRedirectRule;
+  redirectUrl: string;
+};

@@ -2,6 +2,7 @@ import { html, render } from "lit-html";
 import { unsafeSVG } from "lit-html/directives/unsafe-svg.js";
 import { DEFAULT_ORIGIN_LIST } from "./defaultOrigns";
 import { getActiveTabOrigin } from "./tab-utils";
+import { RedirectPreferences, SiteRedirectRule } from "./types";
 
 // Import CSS
 import "./popup.css";
@@ -17,6 +18,11 @@ const ICON_ERROR = errorIconSvg;
 
 const defaultOrigins = DEFAULT_ORIGIN_LIST;
 let origins = [""];
+let redirectRules: SiteRedirectRule[] = [];
+let redirectPreferences: RedirectPreferences = {
+  globalEnabled: true,
+  dismissedRuleKeys: [],
+};
 
 let inputText = "";
 let placeholderURL = "https://www.audiogata.com";
@@ -81,10 +87,82 @@ const onDeleteOriginClicked = async (index: number) => {
   render(page(), document.body);
 };
 
+const getRuleKey = (rule: SiteRedirectRule): string =>
+  `${rule.appOrigin}::${rule.pluginId}`;
+
+const onToggleRedirects = async () => {
+  redirectPreferences.globalEnabled = !redirectPreferences.globalEnabled;
+  await browser.runtime.sendMessage({
+    type: "set-redirect-enabled",
+    enabled: redirectPreferences.globalEnabled,
+  });
+  render(page(), document.body);
+};
+
+const onUndismissRule = async (ruleKey: string) => {
+  redirectPreferences.dismissedRuleKeys =
+    redirectPreferences.dismissedRuleKeys.filter((k) => k !== ruleKey);
+  await browser.runtime.sendMessage({
+    type: "undismiss-redirect",
+    ruleKey,
+  });
+  render(page(), document.body);
+};
+
+const onDismissRule = async (ruleKey: string) => {
+  if (!redirectPreferences.dismissedRuleKeys.includes(ruleKey)) {
+    redirectPreferences.dismissedRuleKeys.push(ruleKey);
+  }
+  await browser.runtime.sendMessage({
+    type: "dismiss-redirect",
+    ruleKey,
+  });
+  render(page(), document.body);
+};
+
+const redirectSection = () => {
+  if (redirectRules.length === 0) return html``;
+
+  return html`
+    <div class="redirect-section">
+      <div class="redirect-header">
+        <label class="origin-input-label">Site Redirects</label>
+        <label class="toggle-label">
+          <input
+            type="checkbox"
+            .checked=${redirectPreferences.globalEnabled}
+            @change=${onToggleRedirects}
+          />
+          <span class="toggle-text">${redirectPreferences.globalEnabled ? "On" : "Off"}</span>
+        </label>
+      </div>
+      <ul class="origin-list">
+        ${redirectRules.map((rule) => {
+          const key = getRuleKey(rule);
+          const isDismissed = redirectPreferences.dismissedRuleKeys.includes(key);
+          return html`
+            <li class="origin-list-entry redirect-entry ${isDismissed ? "dismissed" : ""}">
+              <div class="redirect-info">
+                <span class="redirect-plugin-name">${rule.pluginName}</span>
+                <span class="redirect-app-name">${rule.appName}</span>
+              </div>
+              ${isDismissed
+                ? html`<button class="redirect-toggle-btn" @click=${() => onUndismissRule(key)}>Enable</button>`
+                : html`<button class="redirect-toggle-btn redirect-toggle-dismiss" @click=${() => onDismissRule(key)}>Disable</button>`
+              }
+            </li>
+          `;
+        })}
+      </ul>
+    </div>
+  `;
+};
+
 const page = () => html`
   ${import.meta.env.DEV ? debugButton(onOpenDebugPage) : ""}
   ${inputField(inputText, onInputTextChange, onAddClick)}
   ${errorField(errorMessage)} ${originList(origins, onDeleteOriginClicked)}
+  ${redirectSection()}
 `;
 
 const debugButton = (onClick: () => void) => html`
@@ -143,12 +221,31 @@ const originList = (
 `;
 
 
+const getRedirectData = async () => {
+  try {
+    const response = await browser.runtime.sendMessage({
+      type: "get-redirect-rules",
+    });
+    if (response) {
+      redirectRules = response.rules || [];
+      redirectPreferences = response.preferences || {
+        globalEnabled: true,
+        dismissedRuleKeys: [],
+      };
+    }
+  } catch {
+    // Background script may not be available (e.g., in tests)
+  }
+};
+
 const init = async () => {
   origins = await getOrigins();
 
   const { placeholderURL: newPlaceholder, inputText: newInputText } = await getActiveTabOrigin();
   placeholderURL = newPlaceholder;
   inputText = newInputText;
+
+  await getRedirectData();
 
   render(page(), document.body);
 };

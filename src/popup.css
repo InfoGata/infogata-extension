@@ -153,3 +153,72 @@ body {
 .debug-button:active {
   background-color: #2952b3;
 }
+
+.redirect-section {
+  margin-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 4px;
+}
+
+.redirect-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 8px;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.toggle-text {
+  min-width: 20px;
+}
+
+.redirect-entry {
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.redirect-entry.dismissed {
+  opacity: 0.5;
+}
+
+.redirect-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.redirect-plugin-name {
+  font-size: 0.85rem;
+  color: white;
+}
+
+.redirect-app-name {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.redirect-toggle-btn {
+  cursor: pointer;
+  background-color: #31c48d;
+  color: rgba(0, 0, 0, 0.82);
+  border-radius: 2px;
+  padding: 3px 10px;
+  outline: none;
+  font-weight: 500;
+  border: 0;
+  font-size: 0.7rem;
+  font-family: "Inter", sans-serif;
+}
+
+.redirect-toggle-dismiss {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.7);
+}

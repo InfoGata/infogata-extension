@@ -7,7 +7,9 @@ import {
   LoginTab,
   ManifestAuthentication,
   NetworkRequestOptions,
+  RedirectPreferences,
   SerializableRequestInit,
+  SiteRedirectRule,
   TabMessage,
 } from "../src/types";
 
@@ -16,6 +18,13 @@ export default defineBackground(() => {
   let origins: string[] = [];
   const defaultOrigins = DEFAULT_ORIGIN_LIST;
   let loginTab: LoginTab | undefined;
+  let redirectRules: SiteRedirectRule[] = [];
+  let redirectPreferences: RedirectPreferences = {
+    globalEnabled: true,
+    dismissedRuleKeys: [],
+  };
+  // Track tabs that have been shown a banner in this session to avoid re-showing after dismiss
+  const sessionDismissedTabs = new Set<string>();
 
   const init = async () => {
     const items = await browser.storage.local.get();
@@ -23,6 +32,48 @@ export default defineBackground(() => {
     if (typeof strOrigins === "string") {
       origins = JSON.parse(strOrigins);
     }
+    const strRules = items["redirectRules"];
+    if (typeof strRules === "string") {
+      redirectRules = JSON.parse(strRules);
+    }
+    const strPrefs = items["redirectPreferences"];
+    if (typeof strPrefs === "string") {
+      redirectPreferences = JSON.parse(strPrefs);
+    }
+  };
+
+  const urlMatchesPattern = (url: string, pattern: string): boolean => {
+    const escaped = pattern
+      .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
+      .replace(/\*/g, ".*");
+    return new RegExp(`^${escaped}$`).test(url);
+  };
+
+  const getRuleKey = (rule: SiteRedirectRule): string => {
+    return `${rule.appOrigin}::${rule.pluginId}`;
+  };
+
+  const findMatchingRule = (url: string): SiteRedirectRule | undefined => {
+    if (!redirectPreferences.globalEnabled) return undefined;
+    return redirectRules.find((rule) => {
+      const key = getRuleKey(rule);
+      if (redirectPreferences.dismissedRuleKeys.includes(key)) return false;
+      return rule.siteMatchPatterns.some((pattern) =>
+        urlMatchesPattern(url, pattern)
+      );
+    });
+  };
+
+  const saveRedirectRules = async () => {
+    await browser.storage.local.set({
+      redirectRules: JSON.stringify(redirectRules),
+    });
+  };
+
+  const saveRedirectPreferences = async () => {
+    await browser.storage.local.set({
+      redirectPreferences: JSON.stringify(redirectPreferences),
+    });
   };
 
   const isMv3 = import.meta.env.MANIFEST_VERSION === 3;
@@ -71,6 +122,12 @@ export default defineBackground(() => {
         }
       }
     }
+    if (changes.redirectRules && typeof changes.redirectRules.newValue === "string") {
+      redirectRules = JSON.parse(changes.redirectRules.newValue);
+    }
+    if (changes.redirectPreferences && typeof changes.redirectPreferences.newValue === "string") {
+      redirectPreferences = JSON.parse(changes.redirectPreferences.newValue);
+    }
   });
 
   browser.runtime.onInstalled.addListener(async (details) => {
@@ -92,6 +149,28 @@ export default defineBackground(() => {
       const url = new URL(tab.url);
       if (origins.includes(url.origin)) {
         injectContentScript(tab);
+      }
+
+      // Check for redirect rule match
+      const matchingRule = findMatchingRule(tab.url);
+      const tabSessionKey = `${tab.id}::${url.origin}`;
+      if (matchingRule && tab.id && !sessionDismissedTabs.has(tabSessionKey)) {
+        const redirectUrl = `${matchingRule.appOrigin}${matchingRule.redirectPath}`;
+        const message: TabMessage = {
+          type: "show-redirect-banner",
+          rule: matchingRule,
+          redirectUrl,
+        };
+        // Content script may not be injected on this page, so inject it first
+        try {
+          await browser.tabs.sendMessage(tab.id, { action: "ping" });
+        } catch {
+          await executeScript(tab.id, { file: "content-script.js" });
+          // Small delay for script to initialize
+          await new Promise((r) => setTimeout(r, 100));
+        }
+        browser.tabs.sendMessage(tab.id, message).catch(() => {});
+        sessionDismissedTabs.add(tabSessionKey);
       }
     }
   });
@@ -364,6 +443,37 @@ export default defineBackground(() => {
         if (sender.tab) {
           openWindow(message.auth, message.pluginId, sender.tab);
         }
+        break;
+      case "register-redirects": {
+        const incoming = message.rules;
+        // Replace rules from the same app origin, keep others
+        const incomingOrigins = new Set(incoming.map((r) => r.appOrigin));
+        redirectRules = [
+          ...redirectRules.filter((r) => !incomingOrigins.has(r.appOrigin)),
+          ...incoming,
+        ];
+        saveRedirectRules();
+        break;
+      }
+      case "dismiss-redirect":
+        if (!redirectPreferences.dismissedRuleKeys.includes(message.ruleKey)) {
+          redirectPreferences.dismissedRuleKeys.push(message.ruleKey);
+          saveRedirectPreferences();
+        }
+        break;
+      case "get-redirect-rules":
+        sendResponse({ rules: redirectRules, preferences: redirectPreferences });
+        return true;
+      case "set-redirect-enabled":
+        redirectPreferences.globalEnabled = message.enabled;
+        saveRedirectPreferences();
+        break;
+      case "undismiss-redirect":
+        redirectPreferences.dismissedRuleKeys =
+          redirectPreferences.dismissedRuleKeys.filter(
+            (k) => k !== message.ruleKey
+          );
+        saveRedirectPreferences();
         break;
     }
   });

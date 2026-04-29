@@ -5,6 +5,7 @@ import {
   NetworkRequest,
   NetworkRequestOptions,
   SerializableRequestInit,
+  SiteRedirectRule,
 } from "../src/types";
 import { cloneInto } from "@emoji-gen/clone-into";
 
@@ -156,6 +157,9 @@ export default defineUnlistedScript(() => {
     },
     openLoginWindow: (auth: ManifestAuthentication, pluginId: string) => {
       sendMessage({ type: "infogata-extension-openlogin-hook", auth, pluginId });
+    },
+    registerRedirects: (rules: SiteRedirectRule[]) => {
+      sendMessage({ type: "infogata-extension-register-redirects", rules });
     },
   };
 
