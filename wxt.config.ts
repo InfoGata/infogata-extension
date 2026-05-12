@@ -28,6 +28,11 @@ export default defineConfig({
         matches: ['<all_urls>'],
       },
     ],
+    browser_specific_settings: {
+      gecko: {
+        id: 'infogata-extension@infogata.com',
+      },
+    },
   }),
   experimental: {
     entrypointLoader: true,
