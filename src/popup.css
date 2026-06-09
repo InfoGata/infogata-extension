@@ -205,6 +205,18 @@ body {
   color: rgba(255, 255, 255, 0.5);
 }
 
+.redirect-app-origin {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.4);
+  word-break: break-all;
+}
+
+.redirect-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .redirect-toggle-btn {
   cursor: pointer;
   background-color: #31c48d;

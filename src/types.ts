@@ -32,7 +32,8 @@ export type BackgroundMessage =
   | BackgroundDismissRedirect
   | BackgroundGetRedirectRules
   | BackgroundSetRedirectEnabled
-  | BackgroundUndismissRedirect;
+  | BackgroundUndismissRedirect
+  | BackgroundDeleteRedirect;
 
 export type HookRequest = {
   type: "infogata-extension-request";
@@ -141,6 +142,11 @@ export interface ExecuteScriptOptions {
   file: string;
 }
 
+export interface RedirectPatternRule {
+  pattern: string;
+  redirectPath: string;
+}
+
 export interface SiteRedirectRule {
   pluginId: string;
   pluginName: string;
@@ -148,6 +154,7 @@ export interface SiteRedirectRule {
   appOrigin: string;
   siteMatchPatterns: string[];
   redirectPath: string;
+  patternRedirects?: RedirectPatternRule[];
 }
 
 export interface RedirectPreferences {
@@ -181,6 +188,11 @@ export type BackgroundSetRedirectEnabled = {
 
 export type BackgroundUndismissRedirect = {
   type: "undismiss-redirect";
+  ruleKey: string;
+};
+
+export type BackgroundDeleteRedirect = {
+  type: "delete-redirect";
   ruleKey: string;
 };
 

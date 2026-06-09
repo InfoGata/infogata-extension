@@ -109,6 +109,17 @@ const onUndismissRule = async (ruleKey: string) => {
   render(page(), document.body);
 };
 
+const onDeleteRule = async (ruleKey: string) => {
+  redirectRules = redirectRules.filter((rule) => getRuleKey(rule) !== ruleKey);
+  redirectPreferences.dismissedRuleKeys =
+    redirectPreferences.dismissedRuleKeys.filter((k) => k !== ruleKey);
+  await browser.runtime.sendMessage({
+    type: "delete-redirect",
+    ruleKey,
+  });
+  render(page(), document.body);
+};
+
 const onDismissRule = async (ruleKey: string) => {
   if (!redirectPreferences.dismissedRuleKeys.includes(ruleKey)) {
     redirectPreferences.dismissedRuleKeys.push(ruleKey);
@@ -145,11 +156,17 @@ const redirectSection = () => {
               <div class="redirect-info">
                 <span class="redirect-plugin-name">${rule.pluginName}</span>
                 <span class="redirect-app-name">${rule.appName}</span>
+                <span class="redirect-app-origin">${rule.appOrigin}</span>
               </div>
-              ${isDismissed
-                ? html`<button class="redirect-toggle-btn" @click=${() => onUndismissRule(key)}>Enable</button>`
-                : html`<button class="redirect-toggle-btn redirect-toggle-dismiss" @click=${() => onDismissRule(key)}>Disable</button>`
-              }
+              <div class="redirect-actions">
+                ${isDismissed
+                  ? html`<button class="redirect-toggle-btn" @click=${() => onUndismissRule(key)}>Enable</button>`
+                  : html`<button class="redirect-toggle-btn redirect-toggle-dismiss" @click=${() => onDismissRule(key)}>Disable</button>`
+                }
+                <button class="origin-delete" title="Remove redirect" @click=${() => onDeleteRule(key)}>
+                  ${unsafeSVG(ICON_DELETE)}
+                </button>
+              </div>
             </li>
           `;
         })}

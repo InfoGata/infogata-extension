@@ -1,5 +1,9 @@
 import { DEFAULT_ORIGIN_LIST } from "../src/defaultOrigns";
 import {
+  resolvePatternRedirect,
+  urlMatchesPattern,
+} from "../src/redirect-utils";
+import {
   BackgroundMessage,
   ExecuteScriptOptions,
   HandleRequestResponse,
@@ -42,13 +46,6 @@ export default defineBackground(() => {
     }
   };
 
-  const urlMatchesPattern = (url: string, pattern: string): boolean => {
-    const escaped = pattern
-      .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
-      .replace(/\*/g, ".*");
-    return new RegExp(`^${escaped}$`).test(url);
-  };
-
   const getRuleKey = (rule: SiteRedirectRule): string => {
     return `${rule.appOrigin}::${rule.pluginId}`;
   };
@@ -58,6 +55,7 @@ export default defineBackground(() => {
     return redirectRules.find((rule) => {
       const key = getRuleKey(rule);
       if (redirectPreferences.dismissedRuleKeys.includes(key)) return false;
+      if (resolvePatternRedirect(url, rule)) return true;
       return rule.siteMatchPatterns.some((pattern) =>
         urlMatchesPattern(url, pattern)
       );
@@ -155,7 +153,10 @@ export default defineBackground(() => {
       const matchingRule = findMatchingRule(tab.url);
       const tabSessionKey = `${tab.id}::${url.origin}`;
       if (matchingRule && tab.id && !sessionDismissedTabs.has(tabSessionKey)) {
-        const redirectUrl = `${matchingRule.appOrigin}${matchingRule.redirectPath}`;
+        const resolvedPath =
+          resolvePatternRedirect(tab.url, matchingRule) ??
+          matchingRule.redirectPath;
+        const redirectUrl = `${matchingRule.appOrigin}${resolvedPath}`;
         const message: TabMessage = {
           type: "show-redirect-banner",
           rule: matchingRule,
@@ -475,6 +476,21 @@ export default defineBackground(() => {
           );
         saveRedirectPreferences();
         break;
+      case "delete-redirect": {
+        redirectRules = redirectRules.filter(
+          (rule) => getRuleKey(rule) !== message.ruleKey
+        );
+        saveRedirectRules();
+        // Drop any dismissed-preference entry for the removed rule
+        if (redirectPreferences.dismissedRuleKeys.includes(message.ruleKey)) {
+          redirectPreferences.dismissedRuleKeys =
+            redirectPreferences.dismissedRuleKeys.filter(
+              (k) => k !== message.ruleKey
+            );
+          saveRedirectPreferences();
+        }
+        break;
+      }
     }
   });
 
