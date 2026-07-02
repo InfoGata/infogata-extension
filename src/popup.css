@@ -193,6 +193,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex: 1;
 }
 
 .redirect-plugin-name {
@@ -233,4 +234,23 @@ body {
 .redirect-toggle-dismiss {
   background-color: rgba(255, 255, 255, 0.15);
   color: rgba(255, 255, 255, 0.7);
+}
+
+.redirect-group {
+  margin-top: 8px;
+}
+
+.redirect-group .redirect-plugin-name {
+  padding: 0 8px 2px;
+  font-weight: 500;
+}
+
+.redirect-group .origin-list {
+  margin: 0;
+}
+
+.redirect-default-radio {
+  margin-right: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
 }

@@ -1,7 +1,8 @@
 import { DEFAULT_ORIGIN_LIST } from "../src/defaultOrigns";
 import {
+  findMatchingRule,
+  getRuleKey,
   resolvePatternRedirect,
-  urlMatchesPattern,
 } from "../src/redirect-utils";
 import {
   BackgroundMessage,
@@ -26,6 +27,7 @@ export default defineBackground(() => {
   let redirectPreferences: RedirectPreferences = {
     globalEnabled: true,
     dismissedRuleKeys: [],
+    defaultOrigins: {},
   };
   // Track tabs that have been shown a banner in this session to avoid re-showing after dismiss
   const sessionDismissedTabs = new Set<string>();
@@ -44,22 +46,6 @@ export default defineBackground(() => {
     if (typeof strPrefs === "string") {
       redirectPreferences = JSON.parse(strPrefs);
     }
-  };
-
-  const getRuleKey = (rule: SiteRedirectRule): string => {
-    return `${rule.appOrigin}::${rule.pluginId}`;
-  };
-
-  const findMatchingRule = (url: string): SiteRedirectRule | undefined => {
-    if (!redirectPreferences.globalEnabled) return undefined;
-    return redirectRules.find((rule) => {
-      const key = getRuleKey(rule);
-      if (redirectPreferences.dismissedRuleKeys.includes(key)) return false;
-      if (resolvePatternRedirect(url, rule)) return true;
-      return rule.siteMatchPatterns.some((pattern) =>
-        urlMatchesPattern(url, pattern)
-      );
-    });
   };
 
   const saveRedirectRules = async () => {
@@ -150,7 +136,11 @@ export default defineBackground(() => {
       }
 
       // Check for redirect rule match
-      const matchingRule = findMatchingRule(tab.url);
+      const matchingRule = findMatchingRule(
+        tab.url,
+        redirectRules,
+        redirectPreferences
+      );
       const tabSessionKey = `${tab.id}::${url.origin}`;
       if (matchingRule && tab.id && !sessionDismissedTabs.has(tabSessionKey)) {
         const resolvedPath =
@@ -477,20 +467,45 @@ export default defineBackground(() => {
         saveRedirectPreferences();
         break;
       case "delete-redirect": {
+        const removedRule = redirectRules.find(
+          (rule) => getRuleKey(rule) === message.ruleKey
+        );
         redirectRules = redirectRules.filter(
           (rule) => getRuleKey(rule) !== message.ruleKey
         );
         saveRedirectRules();
+        let prefsChanged = false;
         // Drop any dismissed-preference entry for the removed rule
         if (redirectPreferences.dismissedRuleKeys.includes(message.ruleKey)) {
           redirectPreferences.dismissedRuleKeys =
             redirectPreferences.dismissedRuleKeys.filter(
               (k) => k !== message.ruleKey
             );
+          prefsChanged = true;
+        }
+        // Drop the default-origin entry if the removed rule was the default
+        if (
+          removedRule &&
+          redirectPreferences.defaultOrigins?.[removedRule.pluginId] ===
+            removedRule.appOrigin
+        ) {
+          const { [removedRule.pluginId]: _removed, ...rest } =
+            redirectPreferences.defaultOrigins;
+          redirectPreferences.defaultOrigins = rest;
+          prefsChanged = true;
+        }
+        if (prefsChanged) {
           saveRedirectPreferences();
         }
         break;
       }
+      case "set-default-redirect-origin":
+        redirectPreferences.defaultOrigins = {
+          ...(redirectPreferences.defaultOrigins ?? {}),
+          [message.pluginId]: message.appOrigin,
+        };
+        saveRedirectPreferences();
+        break;
     }
   });
 

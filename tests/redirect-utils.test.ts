@@ -1,9 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
+  findMatchingRule,
+  getRuleKey,
   resolvePatternRedirect,
   urlMatchesPattern,
 } from "../src/redirect-utils";
-import { SiteRedirectRule } from "../src/types";
+import { RedirectPreferences, SiteRedirectRule } from "../src/types";
 
 const baseRule = (
   patternRedirects?: SiteRedirectRule["patternRedirects"]
@@ -131,5 +133,70 @@ describe("resolvePatternRedirect", () => {
       rule
     );
     expect(out).toBe("/user/spez");
+  });
+});
+
+describe("getRuleKey", () => {
+  it("combines appOrigin and pluginId", () => {
+    expect(getRuleKey(baseRule())).toBe(
+      "https://www.socialgata.com::test-plugin"
+    );
+  });
+});
+
+describe("findMatchingRule", () => {
+  const url = "https://www.reddit.com/r/bald";
+  const prod: SiteRedirectRule = {
+    ...baseRule(),
+    appName: "SocialGata",
+    appOrigin: "https://www.socialgata.com",
+  };
+  const dev: SiteRedirectRule = {
+    ...baseRule(),
+    appName: "Local",
+    appOrigin: "http://localhost:3000",
+  };
+  const prefs = (
+    overrides: Partial<RedirectPreferences> = {}
+  ): RedirectPreferences => ({
+    globalEnabled: true,
+    dismissedRuleKeys: [],
+    ...overrides,
+  });
+
+  it("returns the first matching rule when no default is set", () => {
+    expect(findMatchingRule(url, [prod, dev], prefs())?.appOrigin).toBe(
+      "https://www.socialgata.com"
+    );
+  });
+
+  it("prefers the rule whose appOrigin matches the plugin default", () => {
+    const result = findMatchingRule(
+      url,
+      [prod, dev],
+      prefs({ defaultOrigins: { "test-plugin": "http://localhost:3000" } })
+    );
+    expect(result?.appOrigin).toBe("http://localhost:3000");
+  });
+
+  it("returns undefined when redirects are globally disabled", () => {
+    expect(
+      findMatchingRule(url, [prod, dev], prefs({ globalEnabled: false }))
+    ).toBeUndefined();
+  });
+
+  it("skips dismissed rules and falls back to the next match", () => {
+    const result = findMatchingRule(
+      url,
+      [prod, dev],
+      prefs({ dismissedRuleKeys: [getRuleKey(prod)] })
+    );
+    expect(result?.appOrigin).toBe("http://localhost:3000");
+  });
+
+  it("returns undefined when no rule matches the url", () => {
+    expect(
+      findMatchingRule("https://example.com/", [prod, dev], prefs())
+    ).toBeUndefined();
   });
 });

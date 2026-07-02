@@ -33,7 +33,8 @@ export type BackgroundMessage =
   | BackgroundGetRedirectRules
   | BackgroundSetRedirectEnabled
   | BackgroundUndismissRedirect
-  | BackgroundDeleteRedirect;
+  | BackgroundDeleteRedirect
+  | BackgroundSetDefaultRedirectOrigin;
 
 export type HookRequest = {
   type: "infogata-extension-request";
@@ -160,6 +161,7 @@ export interface SiteRedirectRule {
 export interface RedirectPreferences {
   globalEnabled: boolean;
   dismissedRuleKeys: string[];
+  defaultOrigins?: Record<string, string>; // pluginId -> chosen appOrigin
 }
 
 export type HookRegisterRedirects = {
@@ -194,6 +196,12 @@ export type BackgroundUndismissRedirect = {
 export type BackgroundDeleteRedirect = {
   type: "delete-redirect";
   ruleKey: string;
+};
+
+export type BackgroundSetDefaultRedirectOrigin = {
+  type: "set-default-redirect-origin";
+  pluginId: string;
+  appOrigin: string;
 };
 
 export type TabShowRedirectBanner = {

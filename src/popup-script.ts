@@ -1,6 +1,7 @@
 import { html, render } from "lit-html";
 import { unsafeSVG } from "lit-html/directives/unsafe-svg.js";
 import { DEFAULT_ORIGIN_LIST } from "./defaultOrigns";
+import { getRuleKey } from "./redirect-utils";
 import { getActiveTabOrigin } from "./tab-utils";
 import { RedirectPreferences, SiteRedirectRule } from "./types";
 
@@ -22,6 +23,7 @@ let redirectRules: SiteRedirectRule[] = [];
 let redirectPreferences: RedirectPreferences = {
   globalEnabled: true,
   dismissedRuleKeys: [],
+  defaultOrigins: {},
 };
 
 let inputText = "";
@@ -87,8 +89,18 @@ const onDeleteOriginClicked = async (index: number) => {
   render(page(), document.body);
 };
 
-const getRuleKey = (rule: SiteRedirectRule): string =>
-  `${rule.appOrigin}::${rule.pluginId}`;
+const onSetDefaultOrigin = async (pluginId: string, appOrigin: string) => {
+  redirectPreferences.defaultOrigins = {
+    ...(redirectPreferences.defaultOrigins ?? {}),
+    [pluginId]: appOrigin,
+  };
+  await browser.runtime.sendMessage({
+    type: "set-default-redirect-origin",
+    pluginId,
+    appOrigin,
+  });
+  render(page(), document.body);
+};
 
 const onToggleRedirects = async () => {
   redirectPreferences.globalEnabled = !redirectPreferences.globalEnabled;
@@ -131,8 +143,65 @@ const onDismissRule = async (ruleKey: string) => {
   render(page(), document.body);
 };
 
+const groupRulesByPlugin = (
+  rules: SiteRedirectRule[]
+): { pluginId: string; pluginName: string; rules: SiteRedirectRule[] }[] => {
+  const groups: {
+    pluginId: string;
+    pluginName: string;
+    rules: SiteRedirectRule[];
+  }[] = [];
+  for (const rule of rules) {
+    let group = groups.find((g) => g.pluginId === rule.pluginId);
+    if (!group) {
+      group = { pluginId: rule.pluginId, pluginName: rule.pluginName, rules: [] };
+      groups.push(group);
+    }
+    group.rules.push(rule);
+  }
+  return groups;
+};
+
+const redirectEntry = (
+  rule: SiteRedirectRule,
+  showDefaultRadio: boolean,
+  isDefault: boolean
+) => {
+  const key = getRuleKey(rule);
+  const isDismissed = redirectPreferences.dismissedRuleKeys.includes(key);
+  return html`
+    <li class="origin-list-entry redirect-entry ${isDismissed ? "dismissed" : ""}">
+      ${showDefaultRadio
+        ? html`<input
+            class="redirect-default-radio"
+            type="radio"
+            name="default-${rule.pluginId}"
+            title="Use this site by default"
+            .checked=${isDefault}
+            @change=${() => onSetDefaultOrigin(rule.pluginId, rule.appOrigin)}
+          />`
+        : html``}
+      <div class="redirect-info">
+        <span class="redirect-app-name">${rule.appName}</span>
+        <span class="redirect-app-origin">${rule.appOrigin}</span>
+      </div>
+      <div class="redirect-actions">
+        ${isDismissed
+          ? html`<button class="redirect-toggle-btn" @click=${() => onUndismissRule(key)}>Enable</button>`
+          : html`<button class="redirect-toggle-btn redirect-toggle-dismiss" @click=${() => onDismissRule(key)}>Disable</button>`
+        }
+        <button class="origin-delete" title="Remove redirect" @click=${() => onDeleteRule(key)}>
+          ${unsafeSVG(ICON_DELETE)}
+        </button>
+      </div>
+    </li>
+  `;
+};
+
 const redirectSection = () => {
   if (redirectRules.length === 0) return html``;
+
+  const groups = groupRulesByPlugin(redirectRules);
 
   return html`
     <div class="redirect-section">
@@ -147,30 +216,24 @@ const redirectSection = () => {
           <span class="toggle-text">${redirectPreferences.globalEnabled ? "On" : "Off"}</span>
         </label>
       </div>
-      <ul class="origin-list">
-        ${redirectRules.map((rule) => {
-          const key = getRuleKey(rule);
-          const isDismissed = redirectPreferences.dismissedRuleKeys.includes(key);
-          return html`
-            <li class="origin-list-entry redirect-entry ${isDismissed ? "dismissed" : ""}">
-              <div class="redirect-info">
-                <span class="redirect-plugin-name">${rule.pluginName}</span>
-                <span class="redirect-app-name">${rule.appName}</span>
-                <span class="redirect-app-origin">${rule.appOrigin}</span>
-              </div>
-              <div class="redirect-actions">
-                ${isDismissed
-                  ? html`<button class="redirect-toggle-btn" @click=${() => onUndismissRule(key)}>Enable</button>`
-                  : html`<button class="redirect-toggle-btn redirect-toggle-dismiss" @click=${() => onDismissRule(key)}>Disable</button>`
-                }
-                <button class="origin-delete" title="Remove redirect" @click=${() => onDeleteRule(key)}>
-                  ${unsafeSVG(ICON_DELETE)}
-                </button>
-              </div>
-            </li>
-          `;
-        })}
-      </ul>
+      ${groups.map((group) => {
+        const hasMultiple = group.rules.length > 1;
+        const defaultOrigin =
+          redirectPreferences.defaultOrigins?.[group.pluginId];
+        return html`
+          <div class="redirect-group">
+            <div class="redirect-plugin-name">${group.pluginName}</div>
+            <ul class="origin-list">
+              ${group.rules.map((rule, i) => {
+                const isDefault = defaultOrigin
+                  ? defaultOrigin === rule.appOrigin
+                  : i === 0;
+                return redirectEntry(rule, hasMultiple, isDefault);
+              })}
+            </ul>
+          </div>
+        `;
+      })}
     </div>
   `;
 };
@@ -248,6 +311,7 @@ const getRedirectData = async () => {
       redirectPreferences = response.preferences || {
         globalEnabled: true,
         dismissedRuleKeys: [],
+        defaultOrigins: {},
       };
     }
   } catch {

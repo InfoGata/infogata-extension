@@ -1,4 +1,7 @@
-import { SiteRedirectRule } from "./types";
+import { RedirectPreferences, SiteRedirectRule } from "./types";
+
+export const getRuleKey = (rule: SiteRedirectRule): string =>
+  `${rule.appOrigin}::${rule.pluginId}`;
 
 export const urlMatchesPattern = (url: string, pattern: string): boolean => {
   const escaped = pattern
@@ -50,4 +53,24 @@ export const resolvePatternRedirect = (
     );
   }
   return undefined;
+};
+
+export const findMatchingRule = (
+  url: string,
+  rules: SiteRedirectRule[],
+  preferences: RedirectPreferences
+): SiteRedirectRule | undefined => {
+  if (!preferences.globalEnabled) return undefined;
+  const matches = rules.filter((rule) => {
+    if (preferences.dismissedRuleKeys.includes(getRuleKey(rule))) return false;
+    if (resolvePatternRedirect(url, rule)) return true;
+    return rule.siteMatchPatterns.some((pattern) =>
+      urlMatchesPattern(url, pattern)
+    );
+  });
+  if (matches.length === 0) return undefined;
+  const preferred = matches.find(
+    (rule) => preferences.defaultOrigins?.[rule.pluginId] === rule.appOrigin
+  );
+  return preferred ?? matches[0];
 };
