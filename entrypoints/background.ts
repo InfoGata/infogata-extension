@@ -3,6 +3,7 @@ import {
   findMatchingRule,
   getRuleKey,
   resolvePatternRedirect,
+  urlMatchesPattern,
 } from "../src/redirect-utils";
 import {
   BackgroundMessage,
@@ -238,8 +239,17 @@ export default defineBackground(() => {
       }
     }
 
-    // Check if input and domain
-    if (
+    // Credentials (cookies) are stripped by default so plugins can't ride the
+    // user's logged-in sessions on arbitrary sites. They're sent when the URL
+    // matches one of the plugin's declared siteMatch patterns (so requests to
+    // the plugin's own site behave like a normal browser tab, e.g. carrying
+    // anti-bot session cookies), or when it targets the authorized login domain.
+    const matchesSiteMatch = !!options?.siteMatchPatterns?.some((pattern) =>
+      urlMatchesPattern(input, pattern)
+    );
+    if (matchesSiteMatch) {
+      newInit.credentials = "include";
+    } else if (
       !isAuthorizedDomain(
         input,
         options?.auth?.loginUrl,
