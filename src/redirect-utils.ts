@@ -55,22 +55,60 @@ export const resolvePatternRedirect = (
   return undefined;
 };
 
+export const ruleMatchesUrl = (url: string, rule: SiteRedirectRule): boolean => {
+  if (resolvePatternRedirect(url, rule)) return true;
+  return rule.siteMatchPatterns.some((pattern) =>
+    urlMatchesPattern(url, pattern)
+  );
+};
+
+export const buildRedirectUrl = (
+  url: string,
+  rule: SiteRedirectRule
+): string =>
+  `${rule.appOrigin}${resolvePatternRedirect(url, rule) ?? rule.redirectPath}`;
+
+const isDefaultOrigin = (
+  rule: SiteRedirectRule,
+  preferences: RedirectPreferences
+): boolean => preferences.defaultOrigins?.[rule.pluginId] === rule.appOrigin;
+
 export const findMatchingRule = (
   url: string,
   rules: SiteRedirectRule[],
   preferences: RedirectPreferences
 ): SiteRedirectRule | undefined => {
   if (!preferences.globalEnabled) return undefined;
-  const matches = rules.filter((rule) => {
-    if (preferences.dismissedRuleKeys.includes(getRuleKey(rule))) return false;
-    if (resolvePatternRedirect(url, rule)) return true;
-    return rule.siteMatchPatterns.some((pattern) =>
-      urlMatchesPattern(url, pattern)
-    );
-  });
-  if (matches.length === 0) return undefined;
-  const preferred = matches.find(
-    (rule) => preferences.defaultOrigins?.[rule.pluginId] === rule.appOrigin
+  const matches = rules.filter(
+    (rule) =>
+      !preferences.dismissedRuleKeys.includes(getRuleKey(rule)) &&
+      ruleMatchesUrl(url, rule)
   );
+  if (matches.length === 0) return undefined;
+  const preferred = matches.find((rule) => isDefaultOrigin(rule, preferences));
   return preferred ?? matches[0];
+};
+
+/**
+ * Every rule matching `url`, ignoring dismissals and the global toggle: the
+ * popup offers these on explicit user action, which is the whole point when the
+ * banner has already been closed. Within each plugin, its default origin sorts
+ * first; plugins keep their registration order.
+ */
+export const findMatchingRules = (
+  url: string,
+  rules: SiteRedirectRule[],
+  preferences: RedirectPreferences
+): SiteRedirectRule[] => {
+  const byPlugin = new Map<string, SiteRedirectRule[]>();
+  for (const rule of rules) {
+    if (!ruleMatchesUrl(url, rule)) continue;
+    const group = byPlugin.get(rule.pluginId);
+    if (group) group.push(rule);
+    else byPlugin.set(rule.pluginId, [rule]);
+  }
+  return [...byPlugin.values()].flatMap((group) => [
+    ...group.filter((rule) => isDefaultOrigin(rule, preferences)),
+    ...group.filter((rule) => !isDefaultOrigin(rule, preferences)),
+  ]);
 };

@@ -1,8 +1,8 @@
 import { DEFAULT_ORIGIN_LIST } from "../src/defaultOrigns";
 import {
+  buildRedirectUrl,
   findMatchingRule,
   getRuleKey,
-  resolvePatternRedirect,
   urlMatchesPattern,
 } from "../src/redirect-utils";
 import {
@@ -144,10 +144,7 @@ export default defineBackground(() => {
       );
       const tabSessionKey = `${tab.id}::${url.origin}`;
       if (matchingRule && tab.id && !sessionDismissedTabs.has(tabSessionKey)) {
-        const resolvedPath =
-          resolvePatternRedirect(tab.url, matchingRule) ??
-          matchingRule.redirectPath;
-        const redirectUrl = `${matchingRule.appOrigin}${resolvedPath}`;
+        const redirectUrl = buildRedirectUrl(tab.url, matchingRule);
         const message: TabMessage = {
           type: "show-redirect-banner",
           rule: matchingRule,

@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
+  buildRedirectUrl,
   findMatchingRule,
+  findMatchingRules,
   getRuleKey,
   resolvePatternRedirect,
   urlMatchesPattern,
@@ -198,5 +200,117 @@ describe("findMatchingRule", () => {
     expect(
       findMatchingRule("https://example.com/", [prod, dev], prefs())
     ).toBeUndefined();
+  });
+});
+
+describe("findMatchingRules", () => {
+  const url = "https://www.reddit.com/r/bald";
+  const prod: SiteRedirectRule = {
+    ...baseRule(),
+    appName: "SocialGata",
+    appOrigin: "https://www.socialgata.com",
+  };
+  const dev: SiteRedirectRule = {
+    ...baseRule(),
+    appName: "Local",
+    appOrigin: "http://localhost:3000",
+  };
+  const otherPlugin: SiteRedirectRule = {
+    ...baseRule(),
+    pluginId: "other-plugin",
+    pluginName: "Other Plugin",
+    appName: "VideoGata",
+    appOrigin: "https://www.videogata.com",
+  };
+  const prefs = (
+    overrides: Partial<RedirectPreferences> = {}
+  ): RedirectPreferences => ({
+    globalEnabled: true,
+    dismissedRuleKeys: [],
+    ...overrides,
+  });
+
+  it("returns every matching rule in registration order", () => {
+    expect(
+      findMatchingRules(url, [prod, dev], prefs()).map((r) => r.appOrigin)
+    ).toEqual(["https://www.socialgata.com", "http://localhost:3000"]);
+  });
+
+  it("includes dismissed rules, since the popup is an explicit user action", () => {
+    const result = findMatchingRules(
+      url,
+      [prod, dev],
+      prefs({ dismissedRuleKeys: [getRuleKey(prod), getRuleKey(dev)] })
+    );
+    expect(result).toHaveLength(2);
+  });
+
+  it("includes rules when redirects are globally disabled", () => {
+    expect(
+      findMatchingRules(url, [prod, dev], prefs({ globalEnabled: false }))
+    ).toHaveLength(2);
+  });
+
+  it("sorts a plugin's default origin first within its own group", () => {
+    const result = findMatchingRules(
+      url,
+      [prod, dev],
+      prefs({ defaultOrigins: { "test-plugin": "http://localhost:3000" } })
+    );
+    expect(result.map((r) => r.appOrigin)).toEqual([
+      "http://localhost:3000",
+      "https://www.socialgata.com",
+    ]);
+  });
+
+  it("keeps rules grouped by plugin without reordering plugins", () => {
+    const result = findMatchingRules(
+      url,
+      [prod, otherPlugin, dev],
+      prefs({ defaultOrigins: { "test-plugin": "http://localhost:3000" } })
+    );
+    expect(result.map((r) => r.appOrigin)).toEqual([
+      "http://localhost:3000",
+      "https://www.socialgata.com",
+      "https://www.videogata.com",
+    ]);
+  });
+
+  it("returns an empty array when no rule matches the url", () => {
+    expect(findMatchingRules("https://example.com/", [prod, dev], prefs())).toEqual(
+      []
+    );
+  });
+});
+
+describe("buildRedirectUrl", () => {
+  it("appends the static redirectPath when no patternRedirects match", () => {
+    expect(buildRedirectUrl("https://www.reddit.com/r/bald", baseRule())).toBe(
+      "https://www.socialgata.com/plugins/test-plugin/feed"
+    );
+  });
+
+  it("appends the pattern-derived path when a patternRedirect matches", () => {
+    const rule = baseRule([
+      {
+        pattern: "https://*.reddit.com/r/:community/comments/:postId/*",
+        redirectPath: "/plugins/test-plugin/community/:community/post/:postId",
+      },
+    ]);
+    expect(
+      buildRedirectUrl("https://www.reddit.com/r/bald/comments/123/title/", rule)
+    ).toBe("https://www.socialgata.com/plugins/test-plugin/community/bald/post/123");
+  });
+
+  it("falls back to redirectPath when the url matches siteMatch but no pattern", () => {
+    const rule = baseRule([
+      {
+        pattern: "https://*.reddit.com/r/:community/comments/:postId/*",
+        redirectPath: "/community/:community/post/:postId",
+      },
+    ]);
+    expect(buildRedirectUrl("https://www.reddit.com/", rule)).toBe(
+      "https://www.socialgata.com/plugins/test-plugin/feed"
+    );
   });
 });

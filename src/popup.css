@@ -254,3 +254,65 @@ body {
   cursor: pointer;
   flex-shrink: 0;
 }
+
+.current-page-section {
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 12px;
+}
+
+.current-page-url {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 0 8px 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.redirect-cta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 16px);
+  margin: 4px 8px 0;
+  cursor: pointer;
+  background-color: #31c48d;
+  color: rgba(0, 0, 0, 0.82);
+  border-radius: 3px;
+  padding: 8px 10px;
+  outline: none;
+  border: 0;
+  text-align: left;
+  font-family: "Inter", sans-serif;
+}
+
+.redirect-cta:hover,
+.redirect-cta:focus-visible {
+  background-color: #3fd89c;
+}
+
+.redirect-cta-app {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.redirect-cta-origin {
+  font-size: 0.65rem;
+  color: rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.redirect-cta-default {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background-color: rgba(0, 0, 0, 0.25);
+  color: rgba(0, 0, 0, 0.75);
+  border-radius: 2px;
+  padding: 2px 5px;
+  flex-shrink: 0;
+}

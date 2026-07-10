@@ -1,8 +1,8 @@
 import { html, render } from "lit-html";
 import { unsafeSVG } from "lit-html/directives/unsafe-svg.js";
 import { DEFAULT_ORIGIN_LIST } from "./defaultOrigns";
-import { getRuleKey } from "./redirect-utils";
-import { getActiveTabOrigin } from "./tab-utils";
+import { buildRedirectUrl, findMatchingRules, getRuleKey } from "./redirect-utils";
+import { getActiveTab, getActiveTabOrigin } from "./tab-utils";
 import { RedirectPreferences, SiteRedirectRule } from "./types";
 
 // Import CSS
@@ -25,6 +25,9 @@ let redirectPreferences: RedirectPreferences = {
   dismissedRuleKeys: [],
   defaultOrigins: {},
 };
+
+let currentTab: { id?: number; url?: string } = {};
+let currentPageMatches: SiteRedirectRule[] = [];
 
 let inputText = "";
 let placeholderURL = "https://www.audiogata.com";
@@ -143,6 +146,14 @@ const onDismissRule = async (ruleKey: string) => {
   render(page(), document.body);
 };
 
+const onRedirectToApp = async (rule: SiteRedirectRule) => {
+  if (!currentTab.url || currentTab.id === undefined) return;
+  await browser.tabs.update(currentTab.id, {
+    url: buildRedirectUrl(currentTab.url, rule),
+  });
+  window.close();
+};
+
 const groupRulesByPlugin = (
   rules: SiteRedirectRule[]
 ): { pluginId: string; pluginName: string; rules: SiteRedirectRule[] }[] => {
@@ -198,6 +209,46 @@ const redirectEntry = (
   `;
 };
 
+const currentPageSection = () => {
+  if (currentPageMatches.length === 0) return html``;
+
+  const groups = groupRulesByPlugin(currentPageMatches);
+
+  return html`
+    <div class="current-page-section">
+      <label class="origin-input-label">Open this page in</label>
+      <div class="current-page-url">${currentTab.url}</div>
+      ${groups.map((group) => {
+        const hasMultiple = group.rules.length > 1;
+        const defaultOrigin =
+          redirectPreferences.defaultOrigins?.[group.pluginId];
+        return html`
+          <div class="redirect-group">
+            <div class="redirect-plugin-name">${group.pluginName}</div>
+            ${group.rules.map((rule, i) => {
+              const isDefault = defaultOrigin
+                ? defaultOrigin === rule.appOrigin
+                : i === 0;
+              return html`
+                <button
+                  class="redirect-cta"
+                  @click=${() => onRedirectToApp(rule)}
+                >
+                  <span class="redirect-cta-app">${rule.appName}</span>
+                  <span class="redirect-cta-origin">${rule.appOrigin}</span>
+                  ${hasMultiple && isDefault
+                    ? html`<span class="redirect-cta-default">default</span>`
+                    : html``}
+                </button>
+              `;
+            })}
+          </div>
+        `;
+      })}
+    </div>
+  `;
+};
+
 const redirectSection = () => {
   if (redirectRules.length === 0) return html``;
 
@@ -240,6 +291,7 @@ const redirectSection = () => {
 
 const page = () => html`
   ${import.meta.env.DEV ? debugButton(onOpenDebugPage) : ""}
+  ${currentPageSection()}
   ${inputField(inputText, onInputTextChange, onAddClick)}
   ${errorField(errorMessage)} ${originList(origins, onDeleteOriginClicked)}
   ${redirectSection()}
@@ -326,7 +378,13 @@ const init = async () => {
   placeholderURL = newPlaceholder;
   inputText = newInputText;
 
+  currentTab = await getActiveTab();
+
   await getRedirectData();
+
+  currentPageMatches = currentTab.url
+    ? findMatchingRules(currentTab.url, redirectRules, redirectPreferences)
+    : [];
 
   render(page(), document.body);
 };

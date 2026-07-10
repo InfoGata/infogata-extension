@@ -1,3 +1,16 @@
+export const getActiveTab = async (): Promise<{ id?: number; url?: string }> => {
+  try {
+    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+    if (tabs[0]?.url && tabs[0].url.startsWith("http")) {
+      return { id: tabs[0].id, url: tabs[0].url };
+    }
+  } catch (e) {
+    console.log("Unable to get active tab:", e);
+  }
+
+  return {};
+};
+
 export const getActiveTabOrigin = async (): Promise<{ placeholderURL: string; inputText: string }> => {
   try {
     const tabs = await browser.tabs.query({ active: true, currentWindow: true });
