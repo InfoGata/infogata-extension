@@ -18,8 +18,20 @@ body {
   background-color: #202124;
   width: 30rem;
   height: 35rem;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   color: white;
   font-family: "Inter", sans-serif;
+}
+
+.popup-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  scrollbar-width: thin;
 }
 
 .err {
@@ -68,8 +80,6 @@ body {
   list-style-type: none;
   padding: 0;
   margin: 0;
-  overflow: auto;
-  max-height: 500px;
 }
 
 .origin-add {

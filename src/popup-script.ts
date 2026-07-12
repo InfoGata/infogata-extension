@@ -290,11 +290,13 @@ const redirectSection = () => {
 };
 
 const page = () => html`
-  ${import.meta.env.DEV ? debugButton(onOpenDebugPage) : ""}
-  ${currentPageSection()}
-  ${inputField(inputText, onInputTextChange, onAddClick)}
-  ${errorField(errorMessage)} ${originList(origins, onDeleteOriginClicked)}
-  ${redirectSection()}
+  <div class="popup-content">
+    ${import.meta.env.DEV ? debugButton(onOpenDebugPage) : ""}
+    ${currentPageSection()}
+    ${inputField(inputText, onInputTextChange, onAddClick)}
+    ${errorField(errorMessage)} ${originList(origins, onDeleteOriginClicked)}
+    ${redirectSection()}
+  </div>
 `;
 
 const debugButton = (onClick: () => void) => html`
