@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   buildRedirectUrl,
   findMatchingRule,
@@ -135,6 +135,22 @@ describe("resolvePatternRedirect", () => {
       rule
     );
     expect(out).toBe("/user/spez");
+  });
+
+  it("warns once per invalid pattern instead of failing silently", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const rule = baseRule([
+      { pattern: "::another invalid pattern::", redirectPath: "/should-not-match" },
+    ]);
+
+    // Every navigation re-checks the pattern, but it should only be reported once.
+    resolvePatternRedirect("https://x.com/jack", rule);
+    resolvePatternRedirect("https://x.com/someone-else", rule);
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain("::another invalid pattern::");
+    expect(warn.mock.calls[0][0]).toContain("Test Plugin");
+    warn.mockRestore();
   });
 });
 

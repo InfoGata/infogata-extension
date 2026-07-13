@@ -10,6 +10,9 @@ export const urlMatchesPattern = (url: string, pattern: string): boolean => {
   return new RegExp(`^${escaped}$`).test(url);
 };
 
+// Invalid patterns are re-checked on every navigation, so only report each once.
+const warnedPatterns = new Set<string>();
+
 export const resolvePatternRedirect = (
   url: string,
   rule: SiteRedirectRule
@@ -25,7 +28,14 @@ export const resolvePatternRedirect = (
     let result: any;
     try {
       result = new URLPatternCtor(pr.pattern).exec(url);
-    } catch {
+    } catch (e) {
+      if (!warnedPatterns.has(pr.pattern)) {
+        warnedPatterns.add(pr.pattern);
+        console.warn(
+          `[InfoGata] Ignoring invalid redirect pattern from plugin "${rule.pluginName}" (${rule.pluginId}): ${pr.pattern}`,
+          e
+        );
+      }
       continue;
     }
     if (!result) continue;
