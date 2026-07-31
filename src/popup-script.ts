@@ -3,6 +3,13 @@ import { unsafeSVG } from "lit-html/directives/unsafe-svg.js";
 import { DEFAULT_ORIGIN_LIST } from "./defaultOrigns";
 import { buildRedirectUrl, findMatchingRules, getRuleKey } from "./redirect-utils";
 import { getActiveTab, getActiveTabOrigin } from "./tab-utils";
+import {
+  ThemePreference,
+  applyTheme,
+  getThemePreference,
+  isThemePreference,
+  storeThemePreference,
+} from "./theme";
 import { RedirectPreferences, SiteRedirectRule } from "./types";
 
 // Import CSS
@@ -25,6 +32,8 @@ let redirectPreferences: RedirectPreferences = {
   dismissedRuleKeys: [],
   defaultOrigins: {},
 };
+
+let themePreference: ThemePreference = "system";
 
 let currentTab: { id?: number; url?: string } = {};
 let currentPageMatches: SiteRedirectRule[] = [];
@@ -102,6 +111,16 @@ const onSetDefaultOrigin = async (pluginId: string, appOrigin: string) => {
     pluginId,
     appOrigin,
   });
+  render(page(), document.body);
+};
+
+const onThemeChange = async (ev: Event) => {
+  const value = (ev.target as HTMLSelectElement).value;
+  if (!isThemePreference(value)) return;
+
+  themePreference = value;
+  applyTheme(themePreference);
+  await storeThemePreference(themePreference);
   render(page(), document.body);
 };
 
@@ -290,12 +309,31 @@ const redirectSection = () => {
 };
 
 const page = () => html`
+  ${header()}
   <div class="popup-content">
     ${import.meta.env.DEV ? debugButton(onOpenDebugPage) : ""}
     ${currentPageSection()}
     ${inputField(inputText, onInputTextChange, onAddClick)}
     ${errorField(errorMessage)} ${originList(origins, onDeleteOriginClicked)}
     ${redirectSection()}
+  </div>
+`;
+
+const header = () => html`
+  <div class="popup-header">
+    <span class="popup-title">InfoGata</span>
+    <label class="theme-select-label">
+      Theme
+      <select
+        class="theme-select"
+        .value=${themePreference}
+        @change=${onThemeChange}
+      >
+        <option value="system">System</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </label>
   </div>
 `;
 
@@ -374,6 +412,10 @@ const getRedirectData = async () => {
 };
 
 const init = async () => {
+  // First, so the popup paints in the right theme as early as possible.
+  themePreference = await getThemePreference();
+  applyTheme(themePreference);
+
   origins = await getOrigins();
 
   const { placeholderURL: newPlaceholder, inputText: newInputText } = await getActiveTabOrigin();
