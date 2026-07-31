@@ -26,9 +26,9 @@ npm run zip            # Create Chrome extension zip
 npm run zip:firefox    # Create Firefox extension zip
 
 # Testing
-npm test               # Run Jest tests
-npm run test:watch     # Run Jest tests in watch mode
-npm run test:coverage  # Run Jest tests with coverage
+npm test               # Run Vitest tests
+npm run test:watch     # Run Vitest tests in watch mode
+npm run test:coverage  # Run Vitest tests with coverage
 ```
 
 ## Architecture
@@ -51,10 +51,12 @@ npm run test:coverage  # Run Jest tests with coverage
    - Methods: `networkRequest()`, `openLoginWindow()`, `getVersion()`
    - Communicates with content script via `postMessage`
 
-4. **Options Page** (`src/options.ts`)
-   - Manages authorized origins list
-   - Uses lit-html for reactive UI
-   - Stores origins in browser.storage.local
+4. **Popup** (`entrypoints/popup.html`, `src/popup-script.ts`)
+   - Manages the authorized origins list and the site redirect rules
+   - Offers to open the current page in a matching InfoGata app
+   - Uses lit-html for reactive UI, re-rendering via `render(page(), document.body)`
+   - Stores origins and the theme preference in browser.storage.local; redirect
+     preferences are owned by the background script and updated by message
 
 ### Message Flow
 
@@ -79,4 +81,9 @@ Page (hook.ts) → Content Script → Background Script → Network/Auth
 - Authentication captures cookies and headers from login windows
 - WXT automatically generates manifests for both Chrome and Firefox
 - Entrypoints directory structure for WXT organization
-- Jest testing framework with jsdom environment and webextension mocks
+- Vitest for testing, with `fakeBrowser` from `wxt/testing` for extension APIs.
+  There is no global jsdom environment: DOM tests opt in per file with a
+  `// @vitest-environment jsdom` comment on the first line
+- The popup theme lives in `src/theme.ts`; `src/popup.css` holds the palette as
+  custom properties, defaulting to dark and following `prefers-color-scheme`
+  unless `data-theme` pins a choice
