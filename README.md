@@ -41,11 +41,11 @@ npm run zip:firefox    # Create Firefox extension zip
 
 ### Testing
 ```sh
-npm test               # Run Jest tests
+npm test               # Run Vitest tests
 npm run test:watch     # Run tests in watch mode
 npm run test:coverage  # Run tests with coverage
 ```
 
 ## Credits
 
-Styling and assets of options.html comes from [hoppscotch/hoppscotch-extension](https://github.com/hoppscotch/hoppscotch-extension)
+Styling and assets of the popup come from [hoppscotch/hoppscotch-extension](https://github.com/hoppscotch/hoppscotch-extension)
