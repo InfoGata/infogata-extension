@@ -1,7 +1,7 @@
 import { DEFAULT_ORIGIN_LIST } from "../src/defaultOrigns";
 import {
-  buildRedirectUrl,
-  findMatchingRule,
+  DEFAULT_ACTION_TITLE,
+  getBadgeState,
   getRuleKey,
   urlMatchesPattern,
 } from "../src/redirect-utils";
@@ -30,9 +30,6 @@ export default defineBackground(() => {
     dismissedRuleKeys: [],
     defaultOrigins: {},
   };
-  // Track tabs that have been shown a banner in this session to avoid re-showing after dismiss
-  const sessionDismissedTabs = new Set<string>();
-
   const init = async () => {
     const items = await browser.storage.local.get();
     const strOrigins = items["origins"];
@@ -62,6 +59,56 @@ export default defineBackground(() => {
   };
 
   const isMv3 = import.meta.env.MANIFEST_VERSION === 3;
+
+  // MV3 renamed browserAction to action; the polyfill exposes only the one the
+  // running manifest declares.
+  const actionApi: any = isMv3
+    ? (browser as any).action
+    : (browser as any).browserAction;
+
+  const BADGE_BACKGROUND = "#31c48d";
+  const BADGE_TEXT_COLOR = "#1a1a2e";
+
+  /**
+   * Badge text and title are sticky per tab, so every navigation has to write
+   * both -- including the empty state, or a count set on one page follows the
+   * user to the next.
+   */
+  const updateBadge = async (tabId: number, url: string | undefined) => {
+    if (!actionApi) return;
+    const { text, title } = url
+      ? getBadgeState(url, redirectRules, redirectPreferences)
+      : { text: "", title: DEFAULT_ACTION_TITLE };
+    try {
+      await actionApi.setBadgeText({ tabId, text });
+      await actionApi.setTitle({ tabId, title });
+      if (text) {
+        await actionApi.setBadgeBackgroundColor({
+          tabId,
+          color: BADGE_BACKGROUND,
+        });
+        // Chrome 110+ and Firefox only; white-on-green fails contrast at badge size.
+        if (typeof actionApi.setBadgeTextColor === "function") {
+          await actionApi.setBadgeTextColor({ tabId, color: BADGE_TEXT_COLOR });
+        }
+      }
+    } catch {
+      // Tab closed mid-update.
+    }
+  };
+
+  /**
+   * Toggling redirects or editing rules in the popup has to repaint tabs that
+   * are already open, otherwise a badge lingers on a rule the user just
+   * silenced.
+   */
+  const refreshAllBadges = async () => {
+    for (const tab of await browser.tabs.query({})) {
+      if (tab.id !== undefined) {
+        await updateBadge(tab.id, tab.url);
+      }
+    }
+  };
 
   const executeScript = (tabId: number, options: ExecuteScriptOptions) => {
     if (isMv3) {
@@ -107,11 +154,17 @@ export default defineBackground(() => {
         }
       }
     }
+    let redirectsChanged = false;
     if (changes.redirectRules && typeof changes.redirectRules.newValue === "string") {
       redirectRules = JSON.parse(changes.redirectRules.newValue);
+      redirectsChanged = true;
     }
     if (changes.redirectPreferences && typeof changes.redirectPreferences.newValue === "string") {
       redirectPreferences = JSON.parse(changes.redirectPreferences.newValue);
+      redirectsChanged = true;
+    }
+    if (redirectsChanged) {
+      await refreshAllBadges();
     }
   });
 
@@ -129,38 +182,16 @@ export default defineBackground(() => {
     }
   });
 
-  browser.tabs.onUpdated.addListener(async (_id, _info, tab) => {
+  browser.tabs.onUpdated.addListener(async (tabId, _info, tab) => {
     if (tab.status !== "loading" && tab.url) {
       const url = new URL(tab.url);
       if (origins.includes(url.origin)) {
         injectContentScript(tab);
       }
 
-      // Check for redirect rule match
-      const matchingRule = findMatchingRule(
-        tab.url,
-        redirectRules,
-        redirectPreferences
-      );
-      const tabSessionKey = `${tab.id}::${url.origin}`;
-      if (matchingRule && tab.id && !sessionDismissedTabs.has(tabSessionKey)) {
-        const redirectUrl = buildRedirectUrl(tab.url, matchingRule);
-        const message: TabMessage = {
-          type: "show-redirect-banner",
-          rule: matchingRule,
-          redirectUrl,
-        };
-        // Content script may not be injected on this page, so inject it first
-        try {
-          await browser.tabs.sendMessage(tab.id, { action: "ping" });
-        } catch {
-          await executeScript(tab.id, { file: "content-script.js" });
-          // Small delay for script to initialize
-          await new Promise((r) => setTimeout(r, 100));
-        }
-        browser.tabs.sendMessage(tab.id, message).catch(() => {});
-        sessionDismissedTabs.add(tabSessionKey);
-      }
+      // Redirect offers surface on the toolbar icon, so pages the user visits
+      // need no script injected into them.
+      await updateBadge(tabId, tab.url);
     }
   });
 
@@ -565,5 +596,7 @@ export default defineBackground(() => {
     });
   }
 
-  init();
+  // Badges are painted after the stored rules land, so a browser restart or a
+  // service worker wake-up repaints tabs that were already open.
+  init().then(refreshAllBadges);
 });

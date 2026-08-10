@@ -1,8 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
 import {
   buildRedirectUrl,
+  DEFAULT_ACTION_TITLE,
   findMatchingRule,
   findMatchingRules,
+  getBadgeState,
   getRuleKey,
   resolvePatternRedirect,
   urlMatchesPattern,
@@ -296,6 +298,89 @@ describe("findMatchingRules", () => {
     expect(findMatchingRules("https://example.com/", [prod, dev], prefs())).toEqual(
       []
     );
+  });
+});
+
+describe("getBadgeState", () => {
+  const url = "https://www.reddit.com/r/bald";
+  const prod: SiteRedirectRule = {
+    ...baseRule(),
+    appName: "SocialGata",
+    appOrigin: "https://www.socialgata.com",
+  };
+  const dev: SiteRedirectRule = {
+    ...baseRule(),
+    appName: "Local",
+    appOrigin: "http://localhost:3000",
+  };
+  const otherPlugin: SiteRedirectRule = {
+    ...baseRule(),
+    pluginId: "other-plugin",
+    pluginName: "Other Plugin",
+    appName: "VideoGata",
+    appOrigin: "https://www.videogata.com",
+  };
+  const prefs = (
+    overrides: Partial<RedirectPreferences> = {}
+  ): RedirectPreferences => ({
+    globalEnabled: true,
+    dismissedRuleKeys: [],
+    ...overrides,
+  });
+
+  it("clears the badge when no rule matches", () => {
+    expect(getBadgeState("https://example.com/", [prod], prefs())).toEqual({
+      text: "",
+      title: DEFAULT_ACTION_TITLE,
+    });
+  });
+
+  it("names the app and plugin when a single plugin matches", () => {
+    expect(getBadgeState(url, [prod], prefs())).toEqual({
+      text: "1",
+      title: "InfoGata — open this page in SocialGata with Test Plugin",
+    });
+  });
+
+  it("counts plugins, not rules, when one plugin has several origins", () => {
+    expect(getBadgeState(url, [prod, dev], prefs()).text).toBe("1");
+  });
+
+  it("names the default origin's app when a plugin has several origins", () => {
+    const state = getBadgeState(
+      url,
+      [prod, dev],
+      prefs({ defaultOrigins: { "test-plugin": "http://localhost:3000" } })
+    );
+    expect(state.title).toBe(
+      "InfoGata — open this page in Local with Test Plugin"
+    );
+  });
+
+  it("counts distinct plugins when several match", () => {
+    expect(getBadgeState(url, [prod, dev, otherPlugin], prefs())).toEqual({
+      text: "2",
+      title: "InfoGata — 2 plugins can open this page",
+    });
+  });
+
+  it("stays silent when redirects are globally disabled", () => {
+    expect(
+      getBadgeState(url, [prod, otherPlugin], prefs({ globalEnabled: false }))
+        .text
+    ).toBe("");
+  });
+
+  it("ignores dismissed rules so a silenced rule stops badging", () => {
+    const state = getBadgeState(
+      url,
+      [prod, otherPlugin],
+      prefs({ dismissedRuleKeys: [getRuleKey(prod)] })
+    );
+    expect(state).toEqual({
+      text: "1",
+      title: "InfoGata — open this page in VideoGata with Other Plugin",
+    });
   });
 });
 

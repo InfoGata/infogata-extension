@@ -88,7 +88,7 @@ export type NotifyLogin = {
   domainHeaders: Record<string, Record<string, string>>;
 };
 
-export type TabMessage = NotifyLogin | TabShowRedirectBanner;
+export type TabMessage = NotifyLogin;
 
 export type LoginMessage = LoginButtonMessage;
 
@@ -208,10 +208,4 @@ export type BackgroundSetDefaultRedirectOrigin = {
   type: "set-default-redirect-origin";
   pluginId: string;
   appOrigin: string;
-};
-
-export type TabShowRedirectBanner = {
-  type: "show-redirect-banner";
-  rule: SiteRedirectRule;
-  redirectUrl: string;
 };

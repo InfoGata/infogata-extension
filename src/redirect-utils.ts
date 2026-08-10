@@ -83,17 +83,30 @@ const isDefaultOrigin = (
   preferences: RedirectPreferences
 ): boolean => preferences.defaultOrigins?.[rule.pluginId] === rule.appOrigin;
 
+/**
+ * Matches the user has not silenced: both the global toggle and per-rule
+ * dismissals suppress a rule here. Contrast with `findMatchingRules`, which
+ * ignores both because the popup only offers rules on explicit user action.
+ */
+export const findActiveMatchingRules = (
+  url: string,
+  rules: SiteRedirectRule[],
+  preferences: RedirectPreferences
+): SiteRedirectRule[] => {
+  if (!preferences.globalEnabled) return [];
+  return rules.filter(
+    (rule) =>
+      !preferences.dismissedRuleKeys.includes(getRuleKey(rule)) &&
+      ruleMatchesUrl(url, rule)
+  );
+};
+
 export const findMatchingRule = (
   url: string,
   rules: SiteRedirectRule[],
   preferences: RedirectPreferences
 ): SiteRedirectRule | undefined => {
-  if (!preferences.globalEnabled) return undefined;
-  const matches = rules.filter(
-    (rule) =>
-      !preferences.dismissedRuleKeys.includes(getRuleKey(rule)) &&
-      ruleMatchesUrl(url, rule)
-  );
+  const matches = findActiveMatchingRules(url, rules, preferences);
   if (matches.length === 0) return undefined;
   const preferred = matches.find((rule) => isDefaultOrigin(rule, preferences));
   return preferred ?? matches[0];
@@ -121,4 +134,45 @@ export const findMatchingRules = (
     ...group.filter((rule) => isDefaultOrigin(rule, preferences)),
     ...group.filter((rule) => !isDefaultOrigin(rule, preferences)),
   ]);
+};
+
+export const DEFAULT_ACTION_TITLE = "InfoGata Extension";
+
+export type BadgeState = {
+  /** Empty string clears the badge. */
+  text: string;
+  title: string;
+};
+
+/**
+ * What the toolbar icon should say for `url`. The badge counts distinct
+ * plugins rather than rules: one plugin registered against both its production
+ * and localhost origins is a single offer, and a badge reading "2" that expands
+ * to one choice in the popup would misrepresent it.
+ */
+export const getBadgeState = (
+  url: string,
+  rules: SiteRedirectRule[],
+  preferences: RedirectPreferences
+): BadgeState => {
+  const matches = findActiveMatchingRules(url, rules, preferences);
+  const pluginIds = new Set(matches.map((rule) => rule.pluginId));
+
+  if (pluginIds.size === 0) {
+    return { text: "", title: DEFAULT_ACTION_TITLE };
+  }
+
+  if (pluginIds.size === 1) {
+    const preferred =
+      matches.find((rule) => isDefaultOrigin(rule, preferences)) ?? matches[0];
+    return {
+      text: "1",
+      title: `InfoGata — open this page in ${preferred.appName} with ${preferred.pluginName}`,
+    };
+  }
+
+  return {
+    text: String(pluginIds.size),
+    title: `InfoGata — ${pluginIds.size} plugins can open this page`,
+  };
 };

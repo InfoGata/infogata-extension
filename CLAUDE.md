@@ -39,6 +39,8 @@ npm run test:coverage  # Run Vitest tests with coverage
    - Central message hub handling network requests
    - Manages authentication windows and cookie capture
    - Injects content scripts into authorized domains
+   - Badges the toolbar icon when a site redirect rule matches the active tab,
+     so redirect offers never touch the page itself
    - Chrome uses service worker, Firefox uses persistent background script
 
 2. **Content Script** (`entrypoints/content-script.ts`)
@@ -53,7 +55,8 @@ npm run test:coverage  # Run Vitest tests with coverage
 
 4. **Popup** (`entrypoints/popup.html`, `src/popup-script.ts`)
    - Manages the authorized origins list and the site redirect rules
-   - Offers to open the current page in a matching InfoGata app
+   - Offers to open the current page in a matching InfoGata app — the payoff for
+     the toolbar badge, and the only surface where a redirect is offered
    - Uses lit-html for reactive UI, re-rendering via `render(page(), document.body)`
    - Stores origins and the theme preference in browser.storage.local; redirect
      preferences are owned by the background script and updated by message
