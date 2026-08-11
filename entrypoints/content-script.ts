@@ -2,7 +2,7 @@ import {
   ContentMessage,
   NetworkRequest,
   HookMessage,
-  HandleRequestResponse,
+  HandleRequestResult,
   HookRequest,
   BackgroundMessage,
   HookOpenLogin,
@@ -35,32 +35,58 @@ export default defineUnlistedScript(() => {
       return await response.blob();
     };
 
+    /**
+     * Answers the page exactly once, whatever happens. A request that goes
+     * unanswered leaves the page awaiting a promise that never settles, which
+     * surfaces as an app that loads forever rather than one that reports a
+     * problem.
+     */
     const makeNetworkRequest = async (request: HookRequest) => {
-      const response: HandleRequestResponse = await sendMessageToBackground({
-        type: "network-request",
-        input: request.input,
-        init: request.init,
-        options: request.options,
-      });
+      try {
+        const response: HandleRequestResult = await sendMessageToBackground({
+          type: "network-request",
+          input: request.input,
+          init: request.init,
+          options: request.options,
+        });
 
-      let body =
-        typeof response.base64 === "string"
-          ? await base64ToBlob(response.base64)
-          : response.base64;
+        if (!response) {
+          throw new Error("The extension returned no response");
+        }
+        if ("error" in response) {
+          throw Object.assign(new Error(response.error.message), {
+            name: response.error.name ?? "Error",
+          });
+        }
 
-      let result: NetworkRequest = {
-        body: body,
-        headers: response.headers,
-        status: response.status,
-        statusText: response.statusText,
-        url: response.url,
-      };
+        let body =
+          typeof response.base64 === "string"
+            ? await base64ToBlob(response.base64)
+            : response.base64;
 
-      sendMessageToHook({
-        type: "infogata-extension-response",
-        result,
-        uid: request.uid,
-      });
+        let result: NetworkRequest = {
+          body: body,
+          headers: response.headers,
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url,
+        };
+
+        sendMessageToHook({
+          type: "infogata-extension-response",
+          result,
+          uid: request.uid,
+        });
+      } catch (error: any) {
+        sendMessageToHook({
+          type: "infogata-extension-response",
+          error: {
+            message: String(error?.message ?? error ?? "Request failed"),
+            name: error?.name,
+          },
+          uid: request.uid,
+        });
+      }
     };
 
     const openWindow = (request: HookOpenLogin) => {

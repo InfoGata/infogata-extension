@@ -2,12 +2,10 @@ import {
   ContentMessage,
   HookMessage,
   ManifestAuthentication,
-  NetworkRequest,
-  NetworkRequestOptions,
-  SerializableRequestInit,
   SiteRedirectRule,
 } from "../src/types";
 import { cloneInto } from "@emoji-gen/clone-into";
+import { createNetworkRequestFn } from "../src/hook-request";
 
 export default defineUnlistedScript(() => {
   console.log("Initilizing hook");
@@ -110,51 +108,19 @@ export default defineUnlistedScript(() => {
         sendMessage({ type: "infogata-extension-getversion-hook", uid });
       });
     },
-    networkRequest: (
-      input: string,
-      init?: RequestInit,
-      options?: NetworkRequestOptions
-    ): Promise<NetworkRequest> => {
-      return new window.Promise(async (resolve, _reject) => {
-        const uid = getMessageId();
-        const onMessage = (e: MessageEvent<ContentMessage>) => {
-          if (e.source !== window || !e.data || ('uid' in e.data && e.data.uid !== uid)) {
-            return;
-          }
-
-          if (e.data.type === "infogata-extension-response") {
-            if (e.data.result) {
-              resolve(cloneInto(e.data.result, window));
-            }
-            window.removeEventListener("message", onMessage);
-          }
-        };
-        window.addEventListener("message", onMessage);
-
-        let serializedInit: SerializableRequestInit | undefined;
-        if (init) {
-          // Serialize the body to base64 if it's binary data
-          const { body, bodyIsBase64 } = await serializeBody(init.body);
-
-          serializedInit = {
-            headers: init.headers,
-            mode: init.mode,
-            method: init.method,
-            credentials: init.credentials,
-            body,
-            bodyIsBase64,
-          };
-        }
-
-        sendMessage({
-          type: "infogata-extension-request",
-          input,
-          init: serializedInit,
-          uid,
-          options,
-        });
-      });
-    },
+    networkRequest: createNetworkRequestFn({
+      sendMessage,
+      addListener: (listener) => window.addEventListener("message", listener as any),
+      removeListener: (listener) =>
+        window.removeEventListener("message", listener as any),
+      clone: (value) => cloneInto(value, window),
+      PromiseCtor: window.Promise,
+      nextUid: getMessageId,
+      serializeBody,
+      isOwnSource: (e) => e.source === window,
+      setTimer: (fn, ms) => window.setTimeout(fn, ms),
+      clearTimer: (handle) => window.clearTimeout(handle as number),
+    }),
     openLoginWindow: (auth: ManifestAuthentication, pluginId: string) => {
       sendMessage({ type: "infogata-extension-openlogin-hook", auth, pluginId });
     },

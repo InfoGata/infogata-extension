@@ -59,9 +59,20 @@ export type HookMessage = HookRequest | HookOpenLogin | HookGetVersion | HookReg
 
 export type ContentResponse = {
   type: "infogata-extension-response";
-  result: NetworkRequest;
+  result?: NetworkRequest;
+  /**
+   * Set when the request never produced a response. Without it the page has no
+   * way to tell a failure from a message that simply never arrived, and its
+   * promise stays pending forever.
+   */
+  error?: RequestFailure;
   uid: number;
 };
+
+export interface RequestFailure {
+  message: string;
+  name?: string;
+}
 
 export type ContentGetVersion = {
   type: "infogata-extension-getversion-content";
@@ -107,6 +118,11 @@ export interface SharedRequest {
 export interface HandleRequestResponse extends SharedRequest {
   base64: string | ArrayBuffer | null;
 }
+
+/** What the background worker answers a `network-request` with. */
+export type HandleRequestResult =
+  | HandleRequestResponse
+  | { error: RequestFailure };
 
 export interface NetworkRequest extends SharedRequest {
   body: Blob | ArrayBuffer | null;

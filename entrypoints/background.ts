@@ -455,7 +455,16 @@ export default defineBackground(() => {
           sendResponse(result);
         })
         .catch((error) => {
-          sendResponse(null);
+          // Answering with null used to strand the caller: the content script
+          // would throw reading the response, so nothing was ever posted back
+          // to the page and its promise never settled.
+          console.error("InfoGata network request failed:", message.input, error);
+          sendResponse({
+            error: {
+              message: String(error?.message ?? error ?? "Request failed"),
+              name: error?.name,
+            },
+          });
         });
       return true; // Indicates that the response is sent asynchronously
     }
