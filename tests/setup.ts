@@ -10,7 +10,7 @@ if (typeof (globalThis as any).URLPattern !== "function") {
 if (!(new TextEncoder().encode("") instanceof Uint8Array)) {
   const NodeTextEncoder = TextEncoder;
   (globalThis as any).TextEncoder = class extends NodeTextEncoder {
-    encode(input?: string) {
+    override encode(input?: string) {
       return new Uint8Array(super.encode(input));
     }
   };

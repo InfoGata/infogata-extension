@@ -84,7 +84,9 @@ Page (hook.ts) → Content Script → Background Script → Network/Auth
 - Authentication captures cookies and headers from login windows
 - WXT automatically generates manifests for both Chrome and Firefox
 - Entrypoints directory structure for WXT organization
-- Vitest for testing, with `fakeBrowser` from `wxt/testing` for extension APIs.
+- Vitest for testing, with `fakeBrowser` from `wxt/testing/fake-browser` for
+  extension APIs (wxt 0.21 split the old `wxt/testing` barrel; the vitest plugin
+  now comes from `wxt/testing/vitest-plugin`).
   There is no global jsdom environment: DOM tests opt in per file with a
   `// @vitest-environment jsdom` comment on the first line
 - The popup theme lives in `src/theme.ts`; `src/popup.css` holds the palette as

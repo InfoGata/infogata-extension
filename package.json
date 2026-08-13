@@ -31,7 +31,8 @@
     "typescript": "^5.7.0",
     "urlpattern-polyfill": "^10.1.0",
     "vitest": "^3.1.2",
-    "wxt": "^0.20.13"
+    "web-ext": "^10.6.0",
+    "wxt": "^0.21.4"
   },
   "dependencies": {
     "@emoji-gen/clone-into": "^0.3.0",

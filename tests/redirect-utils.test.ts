@@ -9,7 +9,7 @@ import {
   resolvePatternRedirect,
   urlMatchesPattern,
 } from "../src/redirect-utils";
-import { RedirectPreferences, SiteRedirectRule } from "../src/types";
+import type { RedirectPreferences, SiteRedirectRule } from "../src/types";
 
 const baseRule = (
   patternRedirects?: SiteRedirectRule["patternRedirects"]
@@ -150,8 +150,8 @@ describe("resolvePatternRedirect", () => {
     resolvePatternRedirect("https://x.com/someone-else", rule);
 
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn.mock.calls[0][0]).toContain("::another invalid pattern::");
-    expect(warn.mock.calls[0][0]).toContain("Test Plugin");
+    expect(warn.mock.calls[0]![0]).toContain("::another invalid pattern::");
+    expect(warn.mock.calls[0]![0]).toContain("Test Plugin");
     warn.mockRestore();
   });
 });

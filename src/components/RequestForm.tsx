@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { RequestConfig } from "./DebugPage";
+import type { RequestConfig } from "./DebugPage";
 
 interface RequestFormProps {
   onSubmit: (config: RequestConfig) => void;

@@ -3,14 +3,14 @@ import { unsafeSVG } from "lit-html/directives/unsafe-svg.js";
 import { DEFAULT_ORIGIN_LIST } from "./defaultOrigns";
 import { buildRedirectUrl, findMatchingRules, getRuleKey } from "./redirect-utils";
 import { getActiveTab, getActiveTabOrigin } from "./tab-utils";
+import type { ThemePreference } from "./theme";
 import {
-  ThemePreference,
   applyTheme,
   getThemePreference,
   isThemePreference,
   storeThemePreference,
 } from "./theme";
-import { RedirectPreferences, SiteRedirectRule } from "./types";
+import type { RedirectPreferences, SiteRedirectRule } from "./types";
 
 // Import CSS
 import "./popup.css";

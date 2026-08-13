@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { fakeBrowser } from 'wxt/testing';
+import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { getActiveTabOrigin } from './tab-utils';
 
 // Mock lit-html and its directives
@@ -20,6 +20,12 @@ vi.mock('../assets/add-icon.svg?raw', () => ({ default: '<svg>add</svg>' }));
 vi.mock('../assets/delete-icon.svg?raw', () => ({ default: '<svg>delete</svg>' }));
 vi.mock('../assets/error-icon.svg?raw', () => ({ default: '<svg>error</svg>' }));
 
+// `tabs.query` is overloaded with a promise form and a callback form. `vi.spyOn`
+// infers the last overload, which returns void, so the resolved tabs have to be
+// widened past that signature to reach the promise form the code actually calls.
+const mockTabsQuery = (tabs: { url?: string }[]) =>
+  vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue(tabs as never);
+
 describe('getActiveTabOrigin', () => {
   beforeEach(() => {
     fakeBrowser.reset();
@@ -27,7 +33,7 @@ describe('getActiveTabOrigin', () => {
 
   it('should return active tab origin when tab has http URL', async () => {
     const mockTabs = [{ url: 'https://example.com/page' }];
-    vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue(mockTabs);
+    mockTabsQuery(mockTabs);
 
     const result = await getActiveTabOrigin();
 
@@ -40,7 +46,7 @@ describe('getActiveTabOrigin', () => {
 
   it('should return default values when tab URL does not start with http', async () => {
     const mockTabs = [{ url: 'chrome://settings/' }];
-    vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue(mockTabs);
+    mockTabsQuery(mockTabs);
 
     const result = await getActiveTabOrigin();
 
@@ -51,7 +57,7 @@ describe('getActiveTabOrigin', () => {
   });
 
   it('should return default values when no tabs are returned', async () => {
-    vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([]);
+    mockTabsQuery([]);
 
     const result = await getActiveTabOrigin();
 
@@ -63,7 +69,7 @@ describe('getActiveTabOrigin', () => {
 
   it('should return default values when tab has no URL', async () => {
     const mockTabs = [{}];
-    vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue(mockTabs);
+    mockTabsQuery(mockTabs);
 
     const result = await getActiveTabOrigin();
 
@@ -90,7 +96,7 @@ describe('getActiveTabOrigin', () => {
 
   it('should handle URLs with paths and query parameters correctly', async () => {
     const mockTabs = [{ url: 'https://music.youtube.com/watch?v=123&list=456' }];
-    vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue(mockTabs);
+    mockTabsQuery(mockTabs);
 
     const result = await getActiveTabOrigin();
 
@@ -102,7 +108,7 @@ describe('getActiveTabOrigin', () => {
 
   it('should handle URLs with non-standard ports', async () => {
     const mockTabs = [{ url: 'http://localhost:3000/app' }];
-    vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue(mockTabs);
+    mockTabsQuery(mockTabs);
 
     const result = await getActiveTabOrigin();
 
@@ -125,9 +131,9 @@ describe('popup-script initialization', () => {
   });
 
   it('should use default origins when no stored origins exist', async () => {
-    vi.spyOn(fakeBrowser.storage.local, 'get').mockResolvedValue({});
+    vi.spyOn(fakeBrowser.storage.local, 'get').mockResolvedValue({} as never);
     vi.spyOn(fakeBrowser.storage.local, 'set').mockResolvedValue(undefined);
-    vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([{ url: 'https://example.com' }]);
+    mockTabsQuery([{ url: 'https://example.com' }]);
     
     // Import the module to trigger initialization
     await import('./popup-script');

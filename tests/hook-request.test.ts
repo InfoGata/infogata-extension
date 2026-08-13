@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { createNetworkRequestFn } from "../src/hook-request";
-import { ContentMessage, HookMessage, NetworkRequest } from "../src/types";
+import type { ContentMessage, HookMessage, NetworkRequest } from "../src/types";
 
 /**
  * The property under test is that the promise always settles. A request that
@@ -103,7 +103,7 @@ describe("createNetworkRequestFn", () => {
     const pending = networkRequest("https://www.reddit.com/hot.json");
 
     expect(timers).toHaveLength(1);
-    timers[0].fn();
+    timers[0]!.fn();
 
     await expect(pending).rejects.toMatchObject({ name: "TimeoutError" });
     expect(listeners).toHaveLength(0);

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { fakeBrowser } from "wxt/testing";
-import { SiteRedirectRule } from "../src/types";
+import { fakeBrowser } from "wxt/testing/fake-browser";
+import type { SiteRedirectRule } from "../src/types";
 
 vi.mock("../src/popup.css", () => ({}));
 vi.mock("../assets/add-icon.svg?raw", () => ({ default: "<svg>add</svg>" }));
@@ -76,9 +76,9 @@ describe("popup current-page redirect section", () => {
     );
 
     expect(ctas()).toHaveLength(1);
-    expect(ctas()[0].textContent).toContain("SocialGata");
+    expect(ctas()[0]!.textContent).toContain("SocialGata");
 
-    ctas()[0].click();
+    ctas()[0]!.click();
     await vi.waitFor(() => expect(update).toHaveBeenCalled());
     expect(update).toHaveBeenCalledWith(42, {
       url: "https://www.socialgata.com/plugins/reddit-plugin/community/bald",
@@ -118,8 +118,8 @@ describe("popup current-page redirect section", () => {
       "Local",
       "SocialGata",
     ]);
-    expect(ctas()[0].querySelector(".redirect-cta-default")).toBeTruthy();
-    expect(ctas()[1].querySelector(".redirect-cta-default")).toBeFalsy();
+    expect(ctas()[0]!.querySelector(".redirect-cta-default")).toBeTruthy();
+    expect(ctas()[1]!.querySelector(".redirect-cta-default")).toBeFalsy();
   });
 
   it("renders no section on a page no rule matches", async () => {

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { RequestForm } from "./RequestForm";
 import { ResponseDisplay } from "./ResponseDisplay";
-import { HandleRequestResponse } from "../types";
+import type { HandleRequestResponse } from "../types";
 
 export interface RequestConfig {
   url: string;

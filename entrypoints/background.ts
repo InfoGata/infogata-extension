@@ -5,7 +5,7 @@ import {
   getRuleKey,
   urlMatchesPattern,
 } from "../src/redirect-utils";
-import {
+import type {
   BackgroundMessage,
   ExecuteScriptOptions,
   HandleRequestResponse,
@@ -316,6 +316,9 @@ export default defineBackground(() => {
       return;
     }
     const tab = win.tabs[0];
+    if (!tab) {
+      return;
+    }
     loginTab = {
       windowTab: tab,
       auth: auth,
@@ -363,7 +366,7 @@ export default defineBackground(() => {
           cookies
             .split(";")
             .map((c) => c.trim().split("="))
-            .map((c) => [c[0], c[1]])
+            .map((c): [string, string] => [c[0] ?? "", c[1] ?? ""])
         );
         loginTab.foundCookies = auth.cookiesToFind.every((c) => cookieMap.has(c));
       }
@@ -373,16 +376,16 @@ export default defineBackground(() => {
           urlHost.endsWith(d)
         );
         if (domainToSearch && !loginTab.domainHeaders[domainToSearch]) {
-          const domainHeaders = auth.domainHeadersToFind[domainToSearch];
+          const domainHeaders = auth.domainHeadersToFind[domainToSearch] ?? [];
           const foundDomainHeaders = domainHeaders.every((dh) =>
             headerMap.has(dh)
           );
           if (foundDomainHeaders) {
-            loginTab.domainHeaders[domainToSearch] = {};
+            const collected: Record<string, string> = {};
             for (const header of domainHeaders) {
-              loginTab.domainHeaders[domainToSearch][header] =
-                headerMap.get(header)!;
+              collected[header] = headerMap.get(header)!;
             }
+            loginTab.domainHeaders[domainToSearch] = collected;
           }
         }
         if (
@@ -564,7 +567,7 @@ export default defineBackground(() => {
         for (let i = 0; i < details.requestHeaders!.length; i++) {
           const header = details.requestHeaders![i];
           if (
-            header.name === "Origin" &&
+            header?.name === "Origin" &&
             header.value?.indexOf("moz-extension://") === 0
           ) {
             details.requestHeaders!.splice(i, 1);

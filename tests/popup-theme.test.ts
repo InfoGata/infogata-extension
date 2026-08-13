@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { fakeBrowser } from "wxt/testing";
+import { fakeBrowser } from "wxt/testing/fake-browser";
 
 vi.mock("../src/popup.css", () => ({}));
 vi.mock("../assets/add-icon.svg?raw", () => ({ default: "<svg>add</svg>" }));

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ResponseData } from "./DebugPage";
+import type { ResponseData } from "./DebugPage";
 
 interface ResponseDisplayProps {
   response: ResponseData | null;

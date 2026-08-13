@@ -1,4 +1,4 @@
-import { RedirectPreferences, SiteRedirectRule } from "./types";
+import type { RedirectPreferences, SiteRedirectRule } from "./types";
 
 export const getRuleKey = (rule: SiteRedirectRule): string =>
   `${rule.appOrigin}::${rule.pluginId}`;
@@ -163,8 +163,9 @@ export const getBadgeState = (
   }
 
   if (pluginIds.size === 1) {
+    // A single plugin id means `matches` is non-empty, so matches[0] exists.
     const preferred =
-      matches.find((rule) => isDefaultOrigin(rule, preferences)) ?? matches[0];
+      matches.find((rule) => isDefaultOrigin(rule, preferences)) ?? matches[0]!;
     return {
       text: "1",
       title: `InfoGata — open this page in ${preferred.appName} with ${preferred.pluginName}`,

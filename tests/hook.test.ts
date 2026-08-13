@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ContentMessage, ManifestAuthentication } from '../src/types';
+import type { ContentMessage, ManifestAuthentication } from '../src/types';
 
 // Mock the @emoji-gen/clone-into module
 vi.mock('@emoji-gen/clone-into', () => ({

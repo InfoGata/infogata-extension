@@ -34,7 +34,4 @@ export default defineConfig({
       },
     },
   }),
-  experimental: {
-    entrypointLoader: true,
-  },
 });
