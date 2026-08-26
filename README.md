@@ -58,6 +58,11 @@ npm run test:watch     # Run tests in watch mode
 npm run test:coverage  # Run tests with coverage
 ```
 
+## Privacy
+
+The extension has no backend and collects nothing. See [PRIVACY.md](PRIVACY.md)
+for what is stored locally and what happens to requests and login credentials.
+
 ## Credits
 
 Styling and assets of the popup come from [hoppscotch/hoppscotch-extension](https://github.com/hoppscotch/hoppscotch-extension)

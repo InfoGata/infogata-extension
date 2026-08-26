@@ -37,15 +37,22 @@ export default defineConfig({
     action: {
       default_popup: 'popup.html',
     },
-    web_accessible_resources: [
-      {
-        resources: ['content-script.js'],
-        matches: ['<all_urls>'],
-      },
-    ],
+    // No web_accessible_resources. content-script.js used to be listed here for
+    // every URL, which let any page probe for it and fingerprint the extension.
+    // It is injected with executeScript({ file }), which does not need the
+    // resource to be web accessible -- hook.js is injected the same way and was
+    // never listed.
     browser_specific_settings: {
       gecko: {
         id: 'infogata-extension@infogata.com',
+        // Nothing is collected, used, transferred, or shared outside the local
+        // browser: no InfoGata server, no analytics, no telemetry. Requests the
+        // extension makes are the plugin's own, to sites the user's plugins
+        // target, and captured login credentials go back to the page that asked
+        // for them and nowhere else. See PRIVACY.md.
+        data_collection_permissions: {
+          required: ['none'],
+        },
       },
     },
   }),
