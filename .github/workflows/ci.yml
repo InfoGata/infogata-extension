@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# A newer push to the same branch makes the in-flight run irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # wxt requires >=22, and vite 7 wants ^20.19 || >=22.12.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `postinstall` runs `wxt prepare`, which generates the .wxt types that
+      # tsconfig extends. Without it nothing typechecks and vitest cannot even
+      # resolve the tsconfig.
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      # Both targets, because the manifest version changes which branch of the
+      # background worker runs -- MV2 registers a blocking webRequest listener
+      # that MV3 replaces with declarativeNetRequest.
+      - name: Build (Chrome)
+        run: npm run build
+
+      - name: Build (Firefox)
+        run: npm run build:firefox
+
+  package:
+    # The artifacts you would actually upload to the stores, built from master.
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Zip (Chrome)
+        run: npm run zip
+
+      # Also emits the sources zip that AMO requires for review.
+      - name: Zip (Firefox)
+        run: npm run zip:firefox
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: extension-zips
+          path: .output/*.zip
+          if-no-files-found: error
