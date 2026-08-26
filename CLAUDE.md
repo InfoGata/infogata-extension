@@ -12,6 +12,10 @@ The extension uses a message-passing architecture between page scripts, content 
 
 ## Build Commands
 
+`npm install` runs `wxt prepare` via `postinstall`, which generates the `.wxt`
+types that `tsconfig.json` extends. Without it nothing typechecks and Vitest
+cannot resolve the tsconfig, so a fresh clone must install before anything else.
+
 ```bash
 # Development
 npm run dev            # Start development server (Chrome by default)
@@ -25,11 +29,15 @@ npm run build:firefox  # Build for Firefox (Manifest V2)
 npm run zip            # Create Chrome extension zip
 npm run zip:firefox    # Create Firefox extension zip
 
-# Testing
+# Checks
+npm run typecheck      # tsc --noEmit
 npm test               # Run Vitest tests
 npm run test:watch     # Run Vitest tests in watch mode
 npm run test:coverage  # Run Vitest tests with coverage
 ```
+
+CI (`.github/workflows/ci.yml`) runs the typecheck, the tests, and both builds on
+every pull request; pushes to `master` also produce the store zips as artifacts.
 
 ## Architecture
 
@@ -69,6 +77,13 @@ npm run test:coverage  # Run Vitest tests with coverage
    - Stores origins and the theme preference in browser.storage.local; redirect
      preferences are owned by the background script and updated by message
 
+6. **Debug Page** (`entrypoints/debug.html`, `src/debug-script.tsx`)
+   - Development only. An `entrypoints:resolved` hook in `wxt.config.ts` skips it
+     when `mode === "production"`, and the popup button that opens it is behind
+     `import.meta.env.DEV`
+   - It drives the background worker's privileged fetch with arbitrary input, so
+     it must not ship; it is also the only thing pulling React into the build
+
 ### Message Flow
 
 ```
@@ -97,6 +112,12 @@ These are load-bearing; changing them changes what a hostile plugin can do.
   `appOrigin`, so a path that resolves off that origin is refused.
 - The login flow tears its `onBeforeSendHeaders` listener down (`endLogin`);
   listeners must not outlive the window that needed them.
+- There is no `web_accessible_resources`. `content-script.js` and `hook.js` are
+  injected with `executeScript({ file })`, which does not need it; listing a
+  resource lets any page probe for it and fingerprint the extension.
+- Only the extension's own consent page may answer a consent prompt, checked by
+  `sender.id` and the `consent.html` URL — the consent window is a real tab, so
+  `sender.tab` does not distinguish it from a web page.
 
 ## Development Notes
 
@@ -114,6 +135,16 @@ These are load-bearing; changing them changes what a hostile plugin can do.
   now comes from `wxt/testing/vitest-plugin`).
   There is no global jsdom environment: DOM tests opt in per file with a
   `// @vitest-environment jsdom` comment on the first line
-- The popup theme lives in `src/theme.ts`; `src/popup.css` holds the palette as
+- The popup theme lives in `src/theme.ts`. `src/theme.css` holds the palette as
   custom properties, defaulting to dark and following `prefers-color-scheme`
-  unless `data-theme` pins a choice
+  unless `data-theme` pins a choice; `popup.css` and `consent.css` both
+  `@import` it
+- No webfont. An `@font-face` `font-family` descriptor takes a single family
+  name, and the old `"Inter", sans-serif` was a parse error, so the faces never
+  registered and 581 kB of TTF shipped unread. If a webfont is ever added back,
+  give each face a single-name descriptor and use woff2
+- The version lives only in `package.json`; WXT reads it from there. Do not add a
+  `version` to the manifest block
+- `STORE.md` and `PRIVACY.md` describe what the extension is permitted to do.
+  Change them in the same commit as `wxt.config.ts` when permissions or the
+  consent flow change
