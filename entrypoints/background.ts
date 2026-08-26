@@ -7,7 +7,7 @@ import {
   storeCredentialHosts,
   type CredentialHostMap,
 } from "../src/credential-hosts";
-import { DEFAULT_ORIGIN_LIST } from "../src/defaultOrigns";
+import { DEFAULT_ORIGIN_LIST } from "../src/defaultOrigins";
 import {
   DEFAULT_ACTION_TITLE,
   getBadgeState,

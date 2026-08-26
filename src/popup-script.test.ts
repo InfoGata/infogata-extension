@@ -80,7 +80,7 @@ describe('getActiveTabOrigin', () => {
   });
 
   it('should return default values and log error when browser.tabs.query throws', async () => {
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     vi.spyOn(fakeBrowser.tabs, 'query').mockRejectedValue(new Error('Permission denied'));
 
     const result = await getActiveTabOrigin();

@@ -24,7 +24,6 @@ export default defineConfig({
   manifest: ({ browser }) => ({
     name: 'InfoGata Extension',
     description: 'Extension for Audiogata, Videogata, ReaderGata, and SocialGata',
-    version: '1.2.0',
     permissions: [
       'storage',
       'tabs',

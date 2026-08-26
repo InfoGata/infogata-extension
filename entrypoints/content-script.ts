@@ -12,7 +12,9 @@ import type {
 
 export default defineUnlistedScript(() => {
 
-    console.log("InfoGata extension initialized");
+    if (import.meta.env.DEV) {
+      console.log("InfoGata extension initialized");
+    }
 
     const sendMessageToBackground = async (
       message: BackgroundMessage
@@ -133,13 +135,13 @@ export default defineUnlistedScript(() => {
 
 
     // Unload previous content script
-    function descructor() {
-      document.removeEventListener(destructionEvent, descructor);
+    function destructor() {
+      document.removeEventListener(destructionEvent, destructor);
       window.removeEventListener("message", onHookMessage);
     }
     const destructionEvent = "destructmyextension_" + browser.runtime.id;
     document.dispatchEvent(new CustomEvent(destructionEvent));
-    document.addEventListener(destructionEvent, descructor);
+    document.addEventListener(destructionEvent, destructor);
 
     browser.runtime.onMessage.addListener((message: TabMessage) => {
       if (message.type === "notify-login") {

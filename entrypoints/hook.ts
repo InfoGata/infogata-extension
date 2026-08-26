@@ -8,7 +8,9 @@ import { cloneInto } from "@emoji-gen/clone-into";
 import { createNetworkRequestFn } from "../src/hook-request";
 
 export default defineUnlistedScript(() => {
-  console.log("Initilizing hook");
+  if (import.meta.env.DEV) {
+    console.log("Initializing hook");
+  }
 
   let messageId = 0;
   const getMessageId = () => {

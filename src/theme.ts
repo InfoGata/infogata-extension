@@ -15,7 +15,7 @@ export const getThemePreference = async (): Promise<ThemePreference> => {
       return stored;
     }
   } catch (e) {
-    console.log("Unable to read theme preference:", e);
+    console.warn("Unable to read theme preference:", e);
   }
 
   return "system";

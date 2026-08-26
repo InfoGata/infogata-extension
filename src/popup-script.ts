@@ -1,6 +1,6 @@
 import { html, render } from "lit-html";
 import { unsafeSVG } from "lit-html/directives/unsafe-svg.js";
-import { DEFAULT_ORIGIN_LIST } from "./defaultOrigns";
+import { DEFAULT_ORIGIN_LIST } from "./defaultOrigins";
 import type { CredentialHostMap } from "./credential-hosts";
 import { buildRedirectUrl, findMatchingRules, getRuleKey } from "./redirect-utils";
 import { getActiveTab, getActiveTabOrigin } from "./tab-utils";

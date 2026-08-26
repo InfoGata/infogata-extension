@@ -5,7 +5,7 @@ export const getActiveTab = async (): Promise<{ id?: number; url?: string }> => 
       return { id: tabs[0].id, url: tabs[0].url };
     }
   } catch (e) {
-    console.log("Unable to get active tab:", e);
+    console.warn("Unable to get active tab:", e);
   }
 
   return {};
@@ -22,7 +22,7 @@ export const getActiveTabOrigin = async (): Promise<{ placeholderURL: string; in
       };
     }
   } catch (e) {
-    console.log("Unable to get active tab origin:", e);
+    console.warn("Unable to get active tab origin:", e);
   }
   
   return {
