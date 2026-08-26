@@ -1,6 +1,7 @@
 import { html, render } from "lit-html";
 import { unsafeSVG } from "lit-html/directives/unsafe-svg.js";
 import { DEFAULT_ORIGIN_LIST } from "./defaultOrigns";
+import type { CredentialHostMap } from "./credential-hosts";
 import { buildRedirectUrl, findMatchingRules, getRuleKey } from "./redirect-utils";
 import { getActiveTab, getActiveTabOrigin } from "./tab-utils";
 import type { ThemePreference } from "./theme";
@@ -34,6 +35,8 @@ let redirectPreferences: RedirectPreferences = {
 };
 
 let themePreference: ThemePreference = "system";
+
+let credentialHosts: CredentialHostMap = {};
 
 let currentTab: { id?: number; url?: string } = {};
 let currentPageMatches: SiteRedirectRule[] = [];
@@ -154,6 +157,13 @@ const onDeleteRule = async (ruleKey: string) => {
   render(page(), document.body);
 };
 
+const onRevokeCredentialHost = async (host: string) => {
+  const { [host]: _removed, ...rest } = credentialHosts;
+  credentialHosts = rest;
+  await browser.runtime.sendMessage({ type: "revoke-credential-host", host });
+  render(page(), document.body);
+};
+
 const onDismissRule = async (ruleKey: string) => {
   if (!redirectPreferences.dismissedRuleKeys.includes(ruleKey)) {
     redirectPreferences.dismissedRuleKeys.push(ruleKey);
@@ -167,9 +177,10 @@ const onDismissRule = async (ruleKey: string) => {
 
 const onRedirectToApp = async (rule: SiteRedirectRule) => {
   if (!currentTab.url || currentTab.id === undefined) return;
-  await browser.tabs.update(currentTab.id, {
-    url: buildRedirectUrl(currentTab.url, rule),
-  });
+  const url = buildRedirectUrl(currentTab.url, rule);
+  // A rule whose origin does not parse has nowhere safe to send the tab.
+  if (url === "about:blank") return;
+  await browser.tabs.update(currentTab.id, { url });
   window.close();
 };
 
@@ -268,6 +279,43 @@ const currentPageSection = () => {
   `;
 };
 
+/**
+ * The standing answers to the consent prompt. Revoking puts a host back to
+ * undecided, so the next request asks again rather than failing silently.
+ */
+const credentialHostSection = () => {
+  const entries = Object.entries(credentialHosts);
+  if (entries.length === 0) return html``;
+
+  return html`
+    <div class="redirect-section">
+      <label class="origin-input-label">Sites plugins may use your login for</label>
+      <ul class="origin-list">
+        ${entries.map(
+          ([host, entry]) => html`
+            <li class="origin-list-entry credential-entry">
+              <div class="redirect-info">
+                <span class="redirect-app-name">${host}</span>
+                <span class="redirect-app-origin">
+                  ${entry.decision === "allow" ? "Allowed" : "Blocked"} for
+                  ${entry.requester}
+                </span>
+              </div>
+              <button
+                class="origin-delete"
+                title="Forget this decision"
+                @click=${() => onRevokeCredentialHost(host)}
+              >
+                ${unsafeSVG(ICON_DELETE)}
+              </button>
+            </li>
+          `
+        )}
+      </ul>
+    </div>
+  `;
+};
+
 const redirectSection = () => {
   if (redirectRules.length === 0) return html``;
 
@@ -315,6 +363,7 @@ const page = () => html`
     ${currentPageSection()}
     ${inputField(inputText, onInputTextChange, onAddClick)}
     ${errorField(errorMessage)} ${originList(origins, onDeleteOriginClicked)}
+    ${credentialHostSection()}
     ${redirectSection()}
   </div>
 `;
@@ -411,6 +460,17 @@ const getRedirectData = async () => {
   }
 };
 
+const getCredentialHosts = async () => {
+  try {
+    const response = await browser.runtime.sendMessage({
+      type: "get-credential-hosts",
+    });
+    if (response?.hosts) credentialHosts = response.hosts;
+  } catch {
+    // Background script may not be available (e.g., in tests)
+  }
+};
+
 const init = async () => {
   // First, so the popup paints in the right theme as early as possible.
   themePreference = await getThemePreference();
@@ -425,6 +485,7 @@ const init = async () => {
   currentTab = await getActiveTab();
 
   await getRedirectData();
+  await getCredentialHosts();
 
   currentPageMatches = currentTab.url
     ? findMatchingRules(currentTab.url, redirectRules, redirectPreferences)

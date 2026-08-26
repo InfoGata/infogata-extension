@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import {
   buildRedirectUrl,
+  isValidAppOrigin,
   DEFAULT_ACTION_TITLE,
   findMatchingRule,
   findMatchingRules,
@@ -413,5 +414,57 @@ describe("buildRedirectUrl", () => {
     expect(buildRedirectUrl("https://www.reddit.com/", rule)).toBe(
       "https://www.socialgata.com/plugins/test-plugin/feed"
     );
+  });
+
+  /**
+   * The popup displays `appOrigin` and navigates to the built URL, so the two
+   * must never disagree. Plain concatenation let a redirectPath that did not
+   * start with "/" rewrite the host through the userinfo separator.
+   */
+  it("keeps a redirectPath that does not start with a slash on the app origin", () => {
+    const rule = { ...baseRule(), redirectPath: "@evil.com/steal" };
+    const built = buildRedirectUrl("https://www.reddit.com/r/bald", rule);
+    expect(new URL(built).host).toBe("www.socialgata.com");
+  });
+
+  it("refuses an absolute redirectPath pointing at another origin", () => {
+    const rule = { ...baseRule(), redirectPath: "https://evil.com/steal" };
+    expect(buildRedirectUrl("https://www.reddit.com/r/bald", rule)).toBe(
+      "https://www.socialgata.com"
+    );
+  });
+
+  it("refuses a protocol-relative redirectPath", () => {
+    const rule = { ...baseRule(), redirectPath: "//evil.com/steal" };
+    expect(buildRedirectUrl("https://www.reddit.com/r/bald", rule)).toBe(
+      "https://www.socialgata.com"
+    );
+  });
+
+  it("refuses to build anything for an appOrigin that is not an http(s) origin", () => {
+    for (const appOrigin of [
+      "javascript:alert(1)//",
+      "https://www.socialgata.com/path",
+      "not an origin",
+    ]) {
+      const rule = { ...baseRule(), appOrigin };
+      expect(buildRedirectUrl("https://www.reddit.com/r/bald", rule)).toBe(
+        "about:blank"
+      );
+    }
+  });
+});
+
+describe("isValidAppOrigin", () => {
+  it("accepts a bare http(s) origin", () => {
+    expect(isValidAppOrigin("https://www.socialgata.com")).toBe(true);
+    expect(isValidAppOrigin("http://localhost:3000")).toBe(true);
+  });
+
+  it("rejects anything carrying a path, another scheme, or garbage", () => {
+    expect(isValidAppOrigin("https://www.socialgata.com/")).toBe(false);
+    expect(isValidAppOrigin("javascript:alert(1)")).toBe(false);
+    expect(isValidAppOrigin("chrome-extension://abc")).toBe(false);
+    expect(isValidAppOrigin("")).toBe(false);
   });
 });

@@ -1,0 +1,98 @@
+@import "./theme.css";
+
+body {
+  background-color: var(--bg);
+  color: var(--fg);
+  margin: 0;
+  padding: 20px;
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.consent-title {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.consent-lede {
+  margin: 0 0 12px;
+  color: var(--fg-secondary);
+}
+
+.consent-requester {
+  font-weight: 500;
+  color: var(--fg);
+}
+
+.consent-hosts {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 12px;
+  background-color: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.consent-host {
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.consent-host + .consent-host {
+  margin-top: 4px;
+}
+
+.consent-warning {
+  margin: 0 0 8px;
+  color: var(--fg-secondary);
+}
+
+.consent-detail {
+  margin: 0 0 16px;
+  color: var(--fg-muted);
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.consent-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.consent-button {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  background-color: var(--input-bg);
+  color: var(--fg);
+}
+
+.consent-button:hover,
+.consent-button:focus-visible {
+  border-color: var(--focus-ring);
+}
+
+.consent-allow {
+  background-color: var(--accent);
+  color: var(--accent-fg);
+  border-color: transparent;
+}
+
+.consent-allow:hover,
+.consent-allow:focus-visible {
+  background-color: var(--accent-hover);
+}
+
+.consent-footnote {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: 12px;
+}

@@ -34,7 +34,29 @@ export type BackgroundMessage =
   | BackgroundSetRedirectEnabled
   | BackgroundUndismissRedirect
   | BackgroundDeleteRedirect
-  | BackgroundSetDefaultRedirectOrigin;
+  | BackgroundSetDefaultRedirectOrigin
+  | BackgroundConsentDecision
+  | BackgroundGetCredentialHosts
+  | BackgroundRevokeCredentialHost;
+
+/** Why the user is being asked to hand a plugin their login for a host. */
+export type ConsentKind = "request" | "login";
+
+export type BackgroundConsentDecision = {
+  type: "consent-decision";
+  id: string;
+  allowed: boolean;
+  hosts: string[];
+};
+
+export type BackgroundGetCredentialHosts = {
+  type: "get-credential-hosts";
+};
+
+export type BackgroundRevokeCredentialHost = {
+  type: "revoke-credential-host";
+  host: string;
+};
 
 export type HookRequest = {
   type: "infogata-extension-request";
@@ -131,9 +153,10 @@ export interface NetworkRequest extends SharedRequest {
 export interface NetworkRequestOptions {
   auth?: ManifestAuthentication;
   /**
-   * The plugin's declared siteMatch patterns. Requests whose URL matches one of
-   * these patterns are sent with credentials (cookies), so they behave like the
-   * site would in a normal browser tab (scoped credential access).
+   * The plugin's declared siteMatch patterns. These *nominate* a host for
+   * credentialed access; they do not grant it. The background worker rejects
+   * patterns with a wildcard host, and asks the user before sending cookies to
+   * any host it has no stored decision for. See `src/credential-hosts.ts`.
    */
   siteMatchPatterns?: string[];
 }

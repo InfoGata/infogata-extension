@@ -53,7 +53,15 @@ npm run test:coverage  # Run Vitest tests with coverage
    - Methods: `networkRequest()`, `openLoginWindow()`, `getVersion()`
    - Communicates with content script via `postMessage`
 
-4. **Popup** (`entrypoints/popup.html`, `src/popup-script.ts`)
+4. **Consent Window** (`entrypoints/consent.html`, `src/consent-script.ts`)
+   - Asked before any request carries the user's cookies, and before a login
+     window captures credentials
+   - Opened by the background script, which awaits the answer; a window closed
+     without answering counts as a refusal
+   - Decisions are stored per host in `credentialHosts` and are revocable from
+     the popup
+
+5. **Popup** (`entrypoints/popup.html`, `src/popup-script.ts`)
    - Manages the authorized origins list and the site redirect rules
    - Offers to open the current page in a matching InfoGata app — the payoff for
      the toolbar badge, and the only surface where a redirect is offered
@@ -75,13 +83,30 @@ Page (hook.ts) → Content Script → Background Script → Network/Auth
 - **Build Framework**: WXT handles cross-browser differences automatically
 - **Host Permissions**: Different syntax in manifest files
 
+## Security Invariants
+
+These are load-bearing; changing them changes what a hostile plugin can do.
+
+- Requests are `credentials: "omit"` unless the user has allowed the exact host.
+  A plugin's `siteMatchPatterns` only *nominate* a host -- see
+  `credentialHostFor` in `src/credential-hosts.ts`, which rejects wildcard hosts
+  so a pattern cannot stand for every site at once.
+- Redirect rules are bound to `sender.url`'s origin at registration, so a site
+  cannot register a rule wearing another app's origin, and are capped per origin.
+- `buildRedirectUrl` resolves rather than concatenates: the popup displays
+  `appOrigin`, so a path that resolves off that origin is refused.
+- The login flow tears its `onBeforeSendHeaders` listener down (`endLogin`);
+  listeners must not outlive the window that needed them.
+
 ## Development Notes
 
 - TypeScript with strict mode enabled
 - Uses WXT framework for cross-browser extension development
 - Browser polyfill (`webextension-polyfill`) for cross-browser compatibility
-- All network requests preserve headers (including cookies) when authorized
-- Authentication captures cookies and headers from login windows
+- Network requests are anonymous unless the user has allowed that host; see
+  "Security Invariants" above
+- Authentication captures cookies and headers from login windows, after the user
+  approves the capture in the consent window
 - WXT automatically generates manifests for both Chrome and Firefox
 - Entrypoints directory structure for WXT organization
 - Vitest for testing, with `fakeBrowser` from `wxt/testing/fake-browser` for

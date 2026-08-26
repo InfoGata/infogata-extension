@@ -1,0 +1,90 @@
+@font-face {
+  font-family: "Inter", sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/Inter-Regular.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Inter", sans-serif;
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../assets/Inter-Bold.ttf") format("truetype");
+}
+
+/*
+ * Theming: the dark palette is the :root default. With no data-theme attribute
+ * (the "system" preference) the media query below swaps in the light palette
+ * when the OS asks for it; setting data-theme="light" or "dark" pins one.
+ * The explicit rules must stay after the media query -- the selectors have
+ * equal specificity, so source order decides.
+ */
+:root {
+  color-scheme: dark;
+
+  --bg: #202124;
+  --fg: #ffffff;
+  --fg-secondary: rgba(255, 255, 255, 0.7);
+  --fg-muted: rgba(255, 255, 255, 0.5);
+  --fg-subtle: rgba(255, 255, 255, 0.4);
+  --fg-disabled: #ffffff55;
+  --border: rgba(255, 255, 255, 0.1);
+  --input-bg: rgba(0, 0, 0, 0.2);
+  --focus-ring: rgba(255, 255, 255, 0.5);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.3);
+  --chip-bg: rgba(255, 255, 255, 0.15);
+  --err-bg: #fe4645bb;
+  --err-fg: #ffffff;
+
+  /* Accents read well on both backgrounds, so they are theme independent. */
+  --accent: #31c48d;
+  --accent-hover: #3fd89c;
+  --accent-fg: rgba(0, 0, 0, 0.82);
+  --accent-fg-muted: rgba(0, 0, 0, 0.6);
+  --accent-badge-bg: rgba(0, 0, 0, 0.25);
+  --accent-badge-fg: rgba(0, 0, 0, 0.75);
+  --danger: #fe4645;
+  --debug: #4285f4;
+  --debug-hover: #3367d6;
+  --debug-active: #2952b3;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+
+    --bg: #ffffff;
+    --fg: #202124;
+    --fg-secondary: rgba(0, 0, 0, 0.7);
+    --fg-muted: rgba(0, 0, 0, 0.55);
+    --fg-subtle: rgba(0, 0, 0, 0.45);
+    --fg-disabled: rgba(0, 0, 0, 0.3);
+    --border: rgba(0, 0, 0, 0.12);
+    --input-bg: rgba(0, 0, 0, 0.05);
+    --focus-ring: rgba(0, 0, 0, 0.35);
+    --scrollbar-thumb: rgba(0, 0, 0, 0.3);
+    --chip-bg: rgba(0, 0, 0, 0.08);
+    --err-bg: #e53935;
+    --err-fg: #ffffff;
+  }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #ffffff;
+  --fg: #202124;
+  --fg-secondary: rgba(0, 0, 0, 0.7);
+  --fg-muted: rgba(0, 0, 0, 0.55);
+  --fg-subtle: rgba(0, 0, 0, 0.45);
+  --fg-disabled: rgba(0, 0, 0, 0.3);
+  --border: rgba(0, 0, 0, 0.12);
+  --input-bg: rgba(0, 0, 0, 0.05);
+  --focus-ring: rgba(0, 0, 0, 0.35);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.3);
+  --chip-bg: rgba(0, 0, 0, 0.08);
+  --err-bg: #e53935;
+  --err-fg: #ffffff;
+}

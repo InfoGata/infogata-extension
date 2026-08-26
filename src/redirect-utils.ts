@@ -72,11 +72,44 @@ export const ruleMatchesUrl = (url: string, rule: SiteRedirectRule): boolean => 
   );
 };
 
+/**
+ * Only http(s) origins can be redirect targets, and only ones that survive a
+ * round trip through `URL` -- the popup shows `appOrigin` as the destination, so
+ * anything that parses to a different origin than it displays is a lie.
+ */
+export const isValidAppOrigin = (appOrigin: string): boolean => {
+  try {
+    const parsed = new URL(appOrigin);
+    return (
+      (parsed.protocol === "http:" || parsed.protocol === "https:") &&
+      parsed.origin === appOrigin
+    );
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Resolving rather than concatenating, because `appOrigin + redirectPath` lets a
+ * path that does not start with "/" rewrite the host: appending "@evil.com" to
+ * "https://www.audiogata.com" parses as userinfo plus a host of evil.com, which
+ * navigates somewhere the popup never showed. Anything that resolves off-origin
+ * falls back to the origin's root.
+ */
 export const buildRedirectUrl = (
   url: string,
   rule: SiteRedirectRule
-): string =>
-  `${rule.appOrigin}${resolvePatternRedirect(url, rule) ?? rule.redirectPath}`;
+): string => {
+  const path = resolvePatternRedirect(url, rule) ?? rule.redirectPath;
+  if (!isValidAppOrigin(rule.appOrigin)) return "about:blank";
+  try {
+    const resolved = new URL(path, rule.appOrigin);
+    if (resolved.origin !== rule.appOrigin) return rule.appOrigin;
+    return resolved.href;
+  } catch {
+    return rule.appOrigin;
+  }
+};
 
 const isDefaultOrigin = (
   rule: SiteRedirectRule,
