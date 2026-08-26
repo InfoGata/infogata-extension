@@ -9,7 +9,7 @@ body {
   flex-direction: column;
   overflow: hidden;
   color: var(--fg);
-  font-family: "Inter", sans-serif;
+  font-family: sans-serif;
 }
 
 .popup-header {
@@ -42,7 +42,7 @@ body {
   border: 0;
   border-radius: 2px;
   padding: 3px 6px;
-  font-family: "Inter", sans-serif;
+  font-family: sans-serif;
   font-size: 0.7rem;
 }
 
@@ -83,7 +83,7 @@ body {
   color: var(--fg);
   border: 0;
   border-radius: 2px;
-  font-family: "Inter", sans-serif;
+  font-family: sans-serif;
   display: flex;
   flex: 1;
 }
@@ -176,7 +176,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: "Inter", sans-serif;
+  font-family: sans-serif;
   font-size: 0.95rem;
   transition: background-color 0.2s;
 }
@@ -263,7 +263,7 @@ body {
   font-weight: 500;
   border: 0;
   font-size: 0.7rem;
-  font-family: "Inter", sans-serif;
+  font-family: sans-serif;
 }
 
 .redirect-toggle-dismiss {
@@ -319,7 +319,7 @@ body {
   outline: none;
   border: 0;
   text-align: left;
-  font-family: "Inter", sans-serif;
+  font-family: sans-serif;
 }
 
 .redirect-cta:hover,

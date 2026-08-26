@@ -3,6 +3,21 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
+  hooks: {
+    /**
+     * The debug page is a development tool: it drives the background worker's
+     * privileged fetch with whatever URL and headers you type. Shipping it put
+     * ~200 kB of React in every release and handed a store reviewer a page that
+     * looks exactly like the thing the extension promises not to be. The popup
+     * button that opens it is already dev-only, so nothing references it.
+     */
+    "entrypoints:resolved": (wxt, entrypoints) => {
+      if (wxt.config.mode !== "production") return;
+      for (const entrypoint of entrypoints) {
+        if (entrypoint.name === "debug") entrypoint.skipped = true;
+      }
+    },
+  },
   vite: () => ({
     plugins: [tailwindcss()],
   }),

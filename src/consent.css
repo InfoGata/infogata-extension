@@ -5,7 +5,7 @@ body {
   color: var(--fg);
   margin: 0;
   padding: 20px;
-  font-family: "Inter", sans-serif;
+  font-family: sans-serif;
   font-size: 14px;
   line-height: 1.5;
 }

@@ -1,18 +1,10 @@
-@font-face {
-  font-family: "Inter", sans-serif;
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("../assets/Inter-Regular.ttf") format("truetype");
-}
-
-@font-face {
-  font-family: "Inter", sans-serif;
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("../assets/Inter-Bold.ttf") format("truetype");
-}
+/*
+ * No webfont. Two Inter faces used to be declared here, but `font-family` in an
+ * @font-face descriptor takes a single family name -- "Inter", sans-serif was a
+ * parse error, so the faces registered under no name and the browser never
+ * fetched them. The popup has always drawn in the generic sans-serif below;
+ * deleting the 581 kB of unreachable TTF changes nothing on screen.
+ */
 
 /*
  * Theming: the dark palette is the :root default. With no data-theme attribute
