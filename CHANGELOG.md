@@ -37,6 +37,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - A popup section to review and revoke which sites plugins may use your login
   for.
+- A development-only "Skip consent prompts" toggle, so iterating on a plugin is
+  not interrupted by a prompt per host. It is compiled out of release builds,
+  and `npm run check:bundle` fails CI if any dev-only code reaches one.
 - `PRIVACY.md`, `SECURITY.md`, and `STORE.md` (permission justifications and
   store disclosures).
 - CI running typecheck, tests, and both browser builds on every pull request,

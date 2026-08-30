@@ -292,6 +292,78 @@ describe("credentialed requests", () => {
   });
 });
 
+/**
+ * The development escape hatch. Every read of the flag is behind
+ * `import.meta.env.DEV`, which vitest sets to true, so these exercise the same
+ * branch a dev build runs -- and `production strips the dev consent bypass` in
+ * the build checks confirms the branch is absent from a release.
+ */
+describe("dev auto-consent", () => {
+  const startWithAutoConsent = async (seed?: CredentialHostMap) => {
+    await fakeBrowser.storage.local.set({ devAutoConsent: true });
+    await start(seed);
+  };
+
+  it("allows without opening a window", async () => {
+    await startWithAutoConsent();
+    requestBandcamp();
+    await flush();
+
+    expect(consentWindows()).toHaveLength(0);
+    expect(credentialsUsed()).toBe("include");
+  });
+
+  it("does not record a decision, so turning it off restores the prompt", async () => {
+    await startWithAutoConsent();
+    requestBandcamp();
+    await flush();
+    expect(await storedHosts()).toEqual({});
+
+    await fakeBrowser.storage.local.set({ devAutoConsent: false });
+    await flush();
+    requestBandcamp();
+    await flush();
+    expect(consentWindows()).toHaveLength(1);
+  });
+
+  it("does not override a host the user deliberately denied", async () => {
+    await startWithAutoConsent({
+      "bandcamp.com": { decision: "deny", requester: APP_ORIGIN, decidedAt: 1 },
+    });
+    requestBandcamp();
+    await flush();
+
+    expect(consentWindows()).toHaveLength(0);
+    expect(credentialsUsed()).toBe("omit");
+  });
+
+  it("skips the login prompt too, and opens the login window", async () => {
+    await startWithAutoConsent();
+    sendToBackground(
+      {
+        type: "open-login",
+        auth: { loginUrl: "https://example.com/login" },
+        pluginId: "p1",
+      },
+      pageSender()
+    );
+    await flush();
+
+    expect(consentWindows()).toHaveLength(0);
+    expect(
+      createWindow.mock.calls.map((call) => String(call[0]?.url ?? ""))
+    ).toEqual(["https://example.com/login"]);
+  });
+
+  it("is off unless the flag is actually set", async () => {
+    await start();
+    requestBandcamp();
+    await flush();
+
+    expect(consentWindows()).toHaveLength(1);
+  });
+});
+
 describe("who may answer a prompt", () => {
   it("ignores a decision that did not come from the consent page", async () => {
     await start();

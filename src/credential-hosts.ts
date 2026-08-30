@@ -120,6 +120,31 @@ export const storeCredentialHosts = async (hosts: CredentialHostMap) => {
 };
 
 /**
+ * Development-only escape hatch: answer every consent prompt with "allow"
+ * instead of opening a window.
+ *
+ * Iterating on a plugin means a new host every few minutes, and a prompt each
+ * time makes that unworkable. Every read of this flag is behind
+ * `import.meta.env.DEV`, so the branch is compiled out of a release -- a
+ * "skip consent" switch that survived into production would quietly undo the
+ * guarantee the consent window exists to make.
+ */
+export const DEV_AUTO_CONSENT_KEY = "devAutoConsent";
+
+export const loadDevAutoConsent = async (): Promise<boolean> => {
+  try {
+    const items = await browser.storage.local.get([DEV_AUTO_CONSENT_KEY]);
+    return items?.[DEV_AUTO_CONSENT_KEY] === true;
+  } catch {
+    return false;
+  }
+};
+
+export const storeDevAutoConsent = async (enabled: boolean) => {
+  await browser.storage.local.set({ [DEV_AUTO_CONSENT_KEY]: enabled });
+};
+
+/**
  * Which host, if any, this request is asking to borrow the user's login for.
  *
  * The patterns come from the page, so they are treated as a nomination and

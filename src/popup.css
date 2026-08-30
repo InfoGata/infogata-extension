@@ -355,3 +355,19 @@ body {
 .credential-entry {
   align-items: flex-start;
 }
+
+.dev-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--fg-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dev-toggle-note {
+  margin: 4px 0 0;
+  color: var(--fg-muted);
+  font-size: 12px;
+}

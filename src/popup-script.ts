@@ -2,6 +2,7 @@ import { html, render } from "lit-html";
 import { unsafeSVG } from "lit-html/directives/unsafe-svg.js";
 import { DEFAULT_ORIGIN_LIST } from "./defaultOrigins";
 import type { CredentialHostMap } from "./credential-hosts";
+import { loadDevAutoConsent, storeDevAutoConsent } from "./credential-hosts";
 import { buildRedirectUrl, findMatchingRules, getRuleKey } from "./redirect-utils";
 import { getActiveTab, getActiveTabOrigin } from "./tab-utils";
 import type { ThemePreference } from "./theme";
@@ -37,6 +38,7 @@ let redirectPreferences: RedirectPreferences = {
 let themePreference: ThemePreference = "system";
 
 let credentialHosts: CredentialHostMap = {};
+let devAutoConsent = false;
 
 let currentTab: { id?: number; url?: string } = {};
 let currentPageMatches: SiteRedirectRule[] = [];
@@ -154,6 +156,12 @@ const onDeleteRule = async (ruleKey: string) => {
     type: "delete-redirect",
     ruleKey,
   });
+  render(page(), document.body);
+};
+
+const onToggleDevAutoConsent = async (ev: Event) => {
+  devAutoConsent = (ev.target as HTMLInputElement).checked;
+  await storeDevAutoConsent(devAutoConsent);
   render(page(), document.body);
 };
 
@@ -359,7 +367,7 @@ const redirectSection = () => {
 const page = () => html`
   ${header()}
   <div class="popup-content">
-    ${import.meta.env.DEV ? debugButton(onOpenDebugPage) : ""}
+    ${import.meta.env.DEV ? devTools() : ""}
     ${currentPageSection()}
     ${inputField(inputText, onInputTextChange, onAddClick)}
     ${errorField(errorMessage)} ${originList(origins, onDeleteOriginClicked)}
@@ -386,11 +394,28 @@ const header = () => html`
   </div>
 `;
 
-const debugButton = (onClick: () => void) => html`
+/**
+ * Only rendered in a development build, and the background worker only reads
+ * the flag there too, so neither half of this exists in a release.
+ */
+const devTools = () => html`
   <div class="debug-button-wrapper">
-    <button class="debug-button" @click=${onClick}>
+    <button class="debug-button" @click=${onOpenDebugPage}>
       <span>🔧 Open Debug Page</span>
     </button>
+    <label class="dev-toggle">
+      <input
+        type="checkbox"
+        .checked=${devAutoConsent}
+        @change=${onToggleDevAutoConsent}
+      />
+      <span>Skip consent prompts</span>
+    </label>
+    ${devAutoConsent
+      ? html`<p class="dev-toggle-note">
+          Requests use your login without asking. Development builds only.
+        </p>`
+      : html``}
   </div>
 `;
 
@@ -486,6 +511,9 @@ const init = async () => {
 
   await getRedirectData();
   await getCredentialHosts();
+  if (import.meta.env.DEV) {
+    devAutoConsent = await loadDevAutoConsent();
+  }
 
   currentPageMatches = currentTab.url
     ? findMatchingRules(currentTab.url, redirectRules, redirectPreferences)

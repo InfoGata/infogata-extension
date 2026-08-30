@@ -8,6 +8,7 @@
   "scripts": {
     "postinstall": "wxt prepare",
     "typecheck": "tsc --noEmit",
+    "check:bundle": "node scripts/check-production-bundle.mjs",
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
     "build": "wxt build",

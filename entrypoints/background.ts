@@ -1,6 +1,8 @@
 import {
   CREDENTIAL_HOSTS_KEY,
+  DEV_AUTO_CONSENT_KEY,
   credentialHostFor,
+  loadDevAutoConsent,
   hostFromUrl,
   loadCredentialHosts,
   normalizeHost,
@@ -41,6 +43,8 @@ export default defineBackground(() => {
     defaultOrigins: {},
   };
   let credentialHosts: CredentialHostMap = {};
+  /** Only ever true in a development build; see DEV_AUTO_CONSENT_KEY. */
+  let devAutoConsent = false;
 
   /** A plugin cannot register more rules than a person would ever review. */
   const MAX_REDIRECT_RULES_PER_ORIGIN = 50;
@@ -60,6 +64,9 @@ export default defineBackground(() => {
       redirectPreferences = JSON.parse(strPrefs);
     }
     credentialHosts = await loadCredentialHosts();
+    if (import.meta.env.DEV) {
+      devAutoConsent = await loadDevAutoConsent();
+    }
   };
 
   /**
@@ -186,6 +193,14 @@ export default defineBackground(() => {
     }
     const undecided = hosts.filter((host) => !credentialHosts[host]);
     if (undecided.length === 0) return true;
+    if (import.meta.env.DEV && devAutoConsent) {
+      // Loud on purpose: it should be obvious why nothing is asking.
+      console.warn(
+        `[InfoGata] DEV: auto-allowing ${undecided.join(", ")} without asking. ` +
+          `Turn off "Skip consent prompts" in the popup to be asked again.`
+      );
+      return true;
+    }
     return askForConsent(undecided, requester, kind, detail);
   };
 
@@ -313,6 +328,9 @@ export default defineBackground(() => {
       typeof changes[CREDENTIAL_HOSTS_KEY].newValue === "string"
     ) {
       credentialHosts = JSON.parse(changes[CREDENTIAL_HOSTS_KEY].newValue);
+    }
+    if (import.meta.env.DEV && changes[DEV_AUTO_CONSENT_KEY]) {
+      devAutoConsent = changes[DEV_AUTO_CONSENT_KEY].newValue === true;
     }
   });
 

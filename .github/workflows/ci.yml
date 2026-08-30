@@ -46,6 +46,11 @@ jobs:
       - name: Build (Firefox)
         run: npm run build:firefox
 
+      # The consent bypass and the debug page are dev-only by construction;
+      # this catches the day that silently stops being true.
+      - name: Check production bundle
+        run: npm run check:bundle
+
   package:
     # The artifacts you would actually upload to the stores, built from master.
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'

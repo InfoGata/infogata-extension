@@ -31,6 +31,7 @@ npm run zip:firefox    # Create Firefox extension zip
 
 # Checks
 npm run typecheck      # tsc --noEmit
+npm run check:bundle   # assert no dev-only code shipped (run after both builds)
 npm test               # Run Vitest tests
 npm run test:watch     # Run Vitest tests in watch mode
 npm run test:coverage  # Run Vitest tests with coverage
@@ -118,6 +119,11 @@ These are load-bearing; changing them changes what a hostile plugin can do.
 - Only the extension's own consent page may answer a consent prompt, checked by
   `sender.id` and the `consent.html` URL — the consent window is a real tab, so
   `sender.tab` does not distinguish it from a web page.
+- The "Skip consent prompts" toggle (`DEV_AUTO_CONSENT_KEY`) answers every
+  prompt with "allow" so plugin development is not death by dialog. Every read
+  of it is behind `import.meta.env.DEV`, so it compiles out of a release, and
+  `npm run check:bundle` fails the build if it ever does not. It sits where the
+  prompt would open, so a host the user explicitly denied stays denied.
 
 ## Development Notes
 
