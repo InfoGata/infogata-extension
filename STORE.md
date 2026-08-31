@@ -116,6 +116,10 @@ analytics, and no telemetry. Requests it makes are the plugin's own, to sites
 the user's plugins target, and captured credentials go back to the requesting
 page and nowhere else.
 
+Collecting nothing is a standing commitment of the project, not an accident of
+the current build. Treat a change that makes `none` untrue as a decision to be
+argued for on its own merits, not a detail to be tidied up in the manifest.
+
 **This declaration must be revisited** if the project ever adds analytics, crash
 or error reporting, an update or licence check that phones home, or a
 hosted proxy that requests pass through. Any of those makes `none` untrue.
