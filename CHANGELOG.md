@@ -66,6 +66,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   which surfaced as a page that loaded forever instead of reporting an error.
 - A request that never receives a response now times out after 60 seconds rather
   than hanging indefinitely.
+- Plugin network requests failed in Firefox with `Permission denied to access
+  property "then"`. The hook runs in the content script's sandbox there, across
+  an Xray boundary from the page, and `networkRequest` had become an `async`
+  function — which returns a promise from the sandbox's realm, burying the
+  page-realm promise inside one the page is not allowed to read. It builds the
+  page's promise directly again.
 
 ## [1.2.0] — 2026-08-10
 

@@ -7,7 +7,9 @@ import type { ContentMessage, HookMessage, NetworkRequest } from "../src/types";
  * goes unanswered used to leave the calling app on a loading spinner forever
  * instead of reporting a failure.
  */
-const harness = (overrides: { timeoutMs?: number } = {}) => {
+const harness = (
+  overrides: { timeoutMs?: number; PromiseCtor?: PromiseConstructor } = {}
+) => {
   const listeners: ((event: MessageEvent<ContentMessage>) => void)[] = [];
   const sent: HookMessage[] = [];
   const timers: { fn: () => void; ms: number }[] = [];
@@ -58,6 +60,33 @@ const okResult: NetworkRequest = {
 };
 
 describe("createNetworkRequestFn", () => {
+  /**
+   * In Firefox the hook runs in the content script's sandbox and the page is on
+   * the far side of an Xray boundary, so a promise is only usable by the page if
+   * it was built from the page's own `Promise`. An `async` function would return
+   * one from the sandbox's realm instead, and the page gets `Permission denied
+   * to access property "then"`. `PageRealmPromise` stands in for the page's
+   * constructor; Node has no realms, so identity is the only thing a test here
+   * can check.
+   */
+  it("returns a promise built from the injected page-realm constructor", async () => {
+    class PageRealmPromise<T> extends Promise<T> {}
+    const { networkRequest, deliver } = harness({
+      PromiseCtor: PageRealmPromise as unknown as PromiseConstructor,
+    });
+
+    const pending = networkRequest("https://www.reddit.com/hot.json", {
+      method: "POST",
+      body: "q=1",
+    });
+
+    expect(pending).toBeInstanceOf(PageRealmPromise);
+
+    await flush();
+    deliver({ type: "infogata-extension-response", uid: 1, result: okResult });
+    await expect(pending).resolves.toEqual(okResult);
+  });
+
   it("resolves with the response and stops listening", async () => {
     const { networkRequest, listeners, deliver } = harness();
     const pending = networkRequest("https://www.reddit.com/hot.json");

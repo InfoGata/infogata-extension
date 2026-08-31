@@ -14,6 +14,14 @@ import type {
  * returned promise must **always** settle. It previously resolved only on a
  * successful response, so a failed request left the calling app waiting forever
  * — a page stuck on a loading spinner with nothing to report.
+ *
+ * The returned function must not be `async`. In Firefox the hook runs in the
+ * content script's sandbox, on the far side of an Xray boundary from the page,
+ * and an async function always returns a promise built from *its own* realm —
+ * which would bury the page-realm `PromiseCtor` promise inside a sandbox one the
+ * page is not allowed to touch. The page sees `Permission denied to access
+ * property "then"` instead of a response. So the page's promise is constructed
+ * first and synchronously, and the async work happens inside it.
  */
 
 export interface HookRequestDeps {
@@ -40,37 +48,27 @@ export interface HookRequestDeps {
 export const DEFAULT_REQUEST_TIMEOUT_MS = 60_000;
 
 export const createNetworkRequestFn = (deps: HookRequestDeps) => {
-  return async (
+  return (
     input: string,
     init?: RequestInit,
     options?: NetworkRequestOptions
   ): Promise<NetworkRequest> => {
-    // Serialized up front so the promise executor below stays synchronous: an
-    // async executor swallows anything it throws, which is another way to end up
-    // with a promise that never settles.
-    let serializedInit: SerializableRequestInit | undefined;
-    if (init) {
-      const { body, bodyIsBase64 } = await deps.serializeBody(init.body);
-      serializedInit = {
-        headers: init.headers,
-        mode: init.mode,
-        method: init.method,
-        credentials: init.credentials,
-        body,
-        bodyIsBase64,
-      };
-    }
-
     const uid = deps.nextUid();
 
     return new deps.PromiseCtor<NetworkRequest>((resolve, reject) => {
       let timer: unknown;
+      let settled = false;
 
       const settle = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
         deps.removeListener(onMessage);
         if (timer !== undefined) deps.clearTimer?.(timer);
         fn();
       };
+
+      const fail = (message: string, name = "Error") =>
+        settle(() => reject(deps.clone({ message, name })));
 
       const onMessage = (e: MessageEvent<ContentMessage>) => {
         if (!deps.isOwnSource(e) || !e.data) return;
@@ -79,20 +77,11 @@ export const createNetworkRequestFn = (deps: HookRequestDeps) => {
 
         const { result, error } = e.data;
         if (error) {
-          settle(() =>
-            reject(
-              deps.clone({
-                message: error.message,
-                name: error.name ?? "Error",
-              })
-            )
-          );
+          fail(error.message, error.name ?? "Error");
           return;
         }
         if (!result) {
-          settle(() =>
-            reject(deps.clone({ message: "The extension returned no response" }))
-          );
+          fail("The extension returned no response");
           return;
         }
         settle(() => resolve(deps.clone(result)));
@@ -105,26 +94,46 @@ export const createNetworkRequestFn = (deps: HookRequestDeps) => {
       const timeoutMs = deps.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
       if (deps.setTimer && timeoutMs > 0) {
         timer = deps.setTimer(
-          () =>
-            settle(() =>
-              reject(
-                deps.clone({
-                  message: `The request to ${input} received no response`,
-                  name: "TimeoutError",
-                })
-              )
-            ),
+          () => fail(`The request to ${input} received no response`, "TimeoutError"),
           timeoutMs
         );
       }
 
-      deps.sendMessage({
-        type: "infogata-extension-request",
-        input,
-        init: serializedInit,
-        uid,
-        options,
-      });
+      const send = (serializedInit?: SerializableRequestInit) => {
+        if (settled) return;
+        deps.sendMessage({
+          type: "infogata-extension-request",
+          input,
+          init: serializedInit,
+          uid,
+          options,
+        });
+      };
+
+      if (!init) {
+        send();
+        return;
+      }
+
+      // Serializing a Blob body is asynchronous, so it cannot happen before the
+      // promise above exists. Anything it throws has to reject that promise
+      // rather than escape into an unhandled rejection, which is the other way
+      // a caller ends up waiting forever.
+      Promise.resolve()
+        .then(() => deps.serializeBody(init.body))
+        .then(({ body, bodyIsBase64 }) => {
+          send({
+            headers: init.headers,
+            mode: init.mode,
+            method: init.method,
+            credentials: init.credentials,
+            body,
+            bodyIsBase64,
+          });
+        })
+        .catch((error: any) =>
+          fail(String(error?.message ?? error ?? "Could not serialize the request body"))
+        );
     });
   };
 };
