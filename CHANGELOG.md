@@ -7,6 +7,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-08-31
+
 ### Security
 
 - **Requests no longer carry the user's login unless the user has allowed that
@@ -128,7 +130,8 @@ First release.
 - The extension's own `Origin` header is stripped from its requests to
   youtube.com, which otherwise rejects them.
 
-[Unreleased]: https://github.com/InfoGata/infogata-extension/compare/1.2.0...HEAD
+[Unreleased]: https://github.com/InfoGata/infogata-extension/compare/1.3.0...HEAD
+[1.3.0]: https://github.com/InfoGata/infogata-extension/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/InfoGata/infogata-extension/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/InfoGata/infogata-extension/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/InfoGata/infogata-extension/releases/tag/1.0.0
