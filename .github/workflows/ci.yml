@@ -17,10 +17,10 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # wxt requires >=22, and vite 7 wants ^20.19 || >=22.12.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -57,9 +57,9 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -74,8 +74,12 @@ jobs:
       - name: Zip (Firefox)
         run: npm run zip:firefox
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: extension-zips
           path: .output/*.zip
+          # `.output` is a dot-directory, so everything in it counts as hidden
+          # and is skipped by default. Without this the upload finds no files
+          # and fails the job, having built the zips perfectly well.
+          include-hidden-files: true
           if-no-files-found: error
