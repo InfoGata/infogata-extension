@@ -39,6 +39,13 @@ directly.
 > icon when an installed plugin can open the current page, offering that
 > redirect in the popup, and navigating the tab if the user accepts. Also used
 > to identify which tab to inject the content script into.
+>
+> Some sites refuse any request that does not come from one of their own pages.
+> For those, and only for a site the user has explicitly allowed, the extension
+> opens one pinned background tab on that site and reads pages through it. The
+> tab is titled so it is identifiable, is reused rather than reopened, and is
+> closed once it goes unused. No tab is opened for any other site, and nothing
+> read there leaves the browser.
 
 ### `scripting`
 
@@ -46,6 +53,11 @@ directly.
 > the small hook script into the page's main world so the InfoGata app can call
 > `window.InfoGata.networkRequest()`. Both are injected on demand, only for
 > authorized origins.
+>
+> Also used to run a single `fetch` inside the background tab described under
+> `tabs`, for sites that serve their content only to their own pages. The script
+> is a fetch and nothing else; it runs only on the site the user allowed, and
+> its result is returned to the plugin that asked for it.
 
 ### `webRequest`
 

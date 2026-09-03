@@ -7,6 +7,27 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-09-03
+
+### Added
+
+- **Page-context requests.** Some sites answer on where a request came from
+  rather than on what headers it carries, and refuse anything else. A plugin can
+  now name such URLs in its manifest as `pageContextRequests`, and the extension
+  runs those fetches from a tab parked on that site instead of from the
+  background worker. The tab is pinned, opened in the background, titled
+  "Loading for InfoGata" so it does not read as a stray, and closed once it goes
+  unused; a tab the user already has open on the site is reused first. This is
+  the only way to reach such a site: the header the check reads is
+  browser-controlled and cannot be forged, and a hidden iframe is refused
+  because an embedded frame is cross-site by construction.
+- **A separate consent prompt for it.** Keeping a tab open on a site and reading
+  pages through it is a larger capability than sending cookies, so it asks on
+  its own rather than riding on the credential prompt, and says plainly that a
+  tab will stay open. As with `siteMatchPatterns`, a pattern only nominates a
+  host: a wildcard host is rejected, and the URL must genuinely be on the site
+  the pattern names.
+
 ## [1.3.0] — 2026-08-31
 
 ### Security
@@ -130,7 +151,8 @@ First release.
 - The extension's own `Origin` header is stripped from its requests to
   youtube.com, which otherwise rejects them.
 
-[Unreleased]: https://github.com/InfoGata/infogata-extension/compare/1.3.0...HEAD
+[Unreleased]: https://github.com/InfoGata/infogata-extension/compare/1.4.0...HEAD
+[1.4.0]: https://github.com/InfoGata/infogata-extension/compare/1.3.0...1.4.0
 [1.3.0]: https://github.com/InfoGata/infogata-extension/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/InfoGata/infogata-extension/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/InfoGata/infogata-extension/compare/1.0.0...1.1.0

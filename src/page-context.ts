@@ -227,7 +227,7 @@ const waitForChallenge = async (
   // and the tab is pinned and in the background, so say where it is.
   throw new Error(
     `${origin} is still showing a verification check. Open the pinned ` +
-      `"Loading for SocialGata" tab and complete it, then try again.`
+      `"Loading for InfoGata" tab and complete it, then try again.`
   );
 };
 
@@ -285,7 +285,7 @@ const ensureTab = async (origin: string): Promise<number> => {
 const labelTab = async (tabId: number) => {
   try {
     await runInPage(tabId, () => {
-      document.title = "Loading for SocialGata";
+      document.title = "Loading for InfoGata";
     });
   } catch {
     // Cosmetic only; a failure here must not fail the request.
