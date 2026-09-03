@@ -39,19 +39,33 @@ const decide = async (allowed: boolean) => {
   window.close();
 };
 
-const lede = () =>
-  kind === "login"
-    ? html`A plugin on <span class="consent-requester">${requester}</span> wants
-        to sign you in to:`
-    : html`A plugin on <span class="consent-requester">${requester}</span> wants
-        to use your login for:`;
+const lede = () => {
+  if (kind === "login") {
+    return html`A plugin on <span class="consent-requester">${requester}</span>
+      wants to sign you in to:`;
+  }
+  if (kind === "page-context") {
+    return html`A plugin on <span class="consent-requester">${requester}</span>
+      wants to load pages in the background from:`;
+  }
+  return html`A plugin on <span class="consent-requester">${requester}</span>
+    wants to use your login for:`;
+};
 
-const warning = () =>
-  kind === "login"
-    ? html`InfoGata will open a login window and capture the credentials that
-        site issues, so the plugin can keep acting as you there.`
-    : html`This lets it read pages on that site as you, including anything
-        private to your account.`;
+const warning = () => {
+  if (kind === "login") {
+    return html`InfoGata will open a login window and capture the credentials
+      that site issues, so the plugin can keep acting as you there.`;
+  }
+  if (kind === "page-context") {
+    // Worth spelling out: this is the only consent that keeps a tab around.
+    return html`That site refuses requests unless they come from one of its own
+      pages, so InfoGata will keep a background tab open on it and read pages
+      through that tab as you. The tab closes when it goes unused.`;
+  }
+  return html`This lets it read pages on that site as you, including anything
+    private to your account.`;
+};
 
 const page = () => html`
   <h1 class="consent-title">Allow access?</h1>

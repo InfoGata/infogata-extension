@@ -16,6 +16,10 @@ import {
   getRuleKey,
   isValidAppOrigin,
 } from "../src/redirect-utils";
+import {
+  pageContextFetch,
+  pageContextHostFor,
+} from "../src/page-context";
 import type {
   BackgroundMessage,
   ConsentKind,
@@ -414,6 +418,32 @@ export default defineBackground(() => {
       } else if (init.body) {
         newInit.body = init.body;
       }
+    }
+
+    // Sites that answer on where a request came from, rather than on what it
+    // carries, cannot be satisfied from this worker at all. Those go through a
+    // page on the site itself -- a bigger capability than borrowing cookies, so
+    // it is consented separately.
+    const pageContextHost = pageContextHostFor(input, options);
+    if (pageContextHost) {
+      const allowed = await ensureCredentialConsent(
+        [pageContextHost],
+        requester,
+        "page-context"
+      );
+      if (allowed) {
+        const response = await pageContextFetch(input, newInit);
+        return {
+          base64: await convertBlobToBase64(new Blob([response.body])),
+          headers: response.headers,
+          status: response.status,
+          statusText: response.statusText,
+          url: input,
+        };
+      }
+      console.warn(
+        `[InfoGata] Not allowed to use a page on ${pageContextHost}; falling back to an ordinary request, which that site will probably refuse.`
+      );
     }
 
     // Credentials (cookies) are stripped unless the user has allowed this exact

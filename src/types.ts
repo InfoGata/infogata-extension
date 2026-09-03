@@ -40,7 +40,7 @@ export type BackgroundMessage =
   | BackgroundRevokeCredentialHost;
 
 /** Why the user is being asked to hand a plugin their login for a host. */
-export type ConsentKind = "request" | "login";
+export type ConsentKind = "request" | "login" | "page-context";
 
 export type BackgroundConsentDecision = {
   type: "consent-decision";
@@ -159,6 +159,14 @@ export interface NetworkRequestOptions {
    * any host it has no stored decision for. See `src/credential-hosts.ts`.
    */
   siteMatchPatterns?: string[];
+  /**
+   * The plugin's declared `pageContextRequests` patterns. A matching request is
+   * issued from a page on the target site rather than from this worker, for
+   * sites that answer on where a request came from rather than on its headers.
+   * Like `siteMatchPatterns`, a pattern is only a nomination: it must name a
+   * concrete host and the url must be on it.
+   */
+  pageContextPatterns?: string[];
 }
 
 export interface ManifestAuthentication {
