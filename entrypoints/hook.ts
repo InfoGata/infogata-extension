@@ -123,6 +123,48 @@ export default defineUnlistedScript(() => {
       setTimer: (fn, ms) => window.setTimeout(fn, ms),
       clearTimer: (handle) => window.clearTimeout(handle as number),
     }),
+    /**
+     * A proof-of-origin token for `contentBinding`, minted on `origin` by the
+     * extension. Rejects for origins the extension cannot mint for.
+     */
+    mintPoToken: (
+      origin: string,
+      contentBinding: string,
+      overrides?: { requestKey?: string; integrityTokenPath?: string }
+    ): Promise<string> => {
+      return new window.Promise((resolve, reject) => {
+        const uid = getMessageId();
+        const onMessage = (e: MessageEvent<ContentMessage>) => {
+          if (
+            e.source !== window ||
+            !e.data ||
+            e.data.type !== "infogata-extension-mint-po-token-content" ||
+            e.data.uid !== uid
+          ) {
+            return;
+          }
+          window.removeEventListener("message", onMessage);
+          if (e.data.token) {
+            resolve(e.data.token);
+          } else {
+            // The page's own Error, so Firefox's page can read it.
+            reject(new window.Error(e.data.error?.message ?? "Minting failed"));
+          }
+        };
+        window.addEventListener("message", onMessage);
+
+        sendMessage({
+          type: "infogata-extension-mint-po-token-hook",
+          origin,
+          contentBinding,
+          overrides: overrides && {
+            requestKey: overrides.requestKey,
+            integrityTokenPath: overrides.integrityTokenPath,
+          },
+          uid,
+        });
+      });
+    },
     openLoginWindow: (auth: ManifestAuthentication, pluginId: string) => {
       sendMessage({ type: "infogata-extension-openlogin-hook", auth, pluginId });
     },

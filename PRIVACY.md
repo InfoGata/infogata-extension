@@ -1,6 +1,6 @@
 # Privacy Policy — InfoGata Extension
 
-_Last updated: 2026-08-26_
+_Last updated: 2026-10-04_
 
 ## The short version
 
@@ -50,6 +50,28 @@ plugin can act as you there afterwards.
   browser, on a site you authorized. The credentials are not sent to InfoGata,
   and the extension does not store them.
 - If you decline, no login window opens and nothing is captured.
+
+## Playing YouTube
+
+YouTube only streams about a minute of a video to a player that cannot show a
+token from YouTube's own anti-abuse check, and that check only works on
+youtube.com itself. So when an InfoGata app plays a YouTube video, the extension
+gets that token for it:
+
+- It loads youtube.com in a hidden frame inside the app's tab, runs YouTube's
+  check there, and hands the resulting token to the app page that asked. The
+  token is tied to the video being played.
+- **The frame does not use your YouTube account.** It is loaded without your
+  cookies, every request YouTube's page makes from it goes out without any
+  cookies, and YouTube's responses cannot set cookies. A cookie YouTube's page
+  sets for itself in the frame is never sent back to YouTube. YouTube sees an
+  anonymous visitor.
+- YouTube does see what any website you contact sees: your IP address and
+  browser, and that the frame was opened from an InfoGata app.
+- The frame is removed after ten minutes without playback, or when you close or
+  leave the app. Nothing from it is stored, and nothing is sent to InfoGata.
+- Plugins cannot run their own code in the frame. They can only ask for a token
+  for a video.
 
 ## Permissions
 

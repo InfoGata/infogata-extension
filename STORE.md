@@ -9,7 +9,9 @@ what gets a submission rejected.
 
 > Lets plugins running inside the InfoGata web apps (AudioGata, VideoGata,
 > ReaderGata, SocialGata) fetch content from the sites those plugins support,
-> which a web page cannot do on its own because of CORS.
+> which a web page cannot do on its own because of CORS. For sites that only
+> serve media to clients that prove where they run (YouTube), it also obtains
+> the token the site requires, which a web page on another origin cannot do.
 
 ## Permission justifications
 
@@ -58,6 +60,14 @@ directly.
 > `tabs`, for sites that serve their content only to their own pages. The script
 > is a fetch and nothing else; it runs only on the site the user allowed, and
 > its result is returned to the plugin that asked for it.
+>
+> Also used to obtain playback tokens from YouTube, which streams only about a
+> minute of a video to a client that cannot produce one. When an authorized
+> InfoGata app asks, the extension adds a hidden youtube.com frame to that app's
+> own tab and injects one script packaged with the extension into it. That
+> script uses the anti-abuse check youtube.com's own page loads -- the extension
+> does not download or evaluate it -- and returns a token bound to the video
+> being played. The frame is removed after ten idle minutes.
 
 ### `webRequest`
 
@@ -67,18 +77,34 @@ directly.
 > credentials the plugin needs. The listener is scoped to that window's tab and
 > the specific domains named in the consent prompt, and is removed as soon as
 > the login finishes or the window closes.
+>
+> On Firefox, also used for the hidden youtube.com frame described under
+> `scripting`, in place of the `declarativeNetRequest` rules Chrome uses: to let
+> an InfoGata app embed that one marked URL (removing its `X-Frame-Options` and
+> `Content-Security-Policy` only when an authorized app is the one embedding
+> it), and to keep the frame anonymous by removing cookies from every request
+> its page makes. These listeners exist only while a tab has the frame.
 
 ### `declarativeNetRequest` (Chrome / MV3)
 
 > A single static rule that removes the extension's own `Origin` header from
 > requests it makes to youtube.com, which otherwise rejects them. Scoped to
 > requests initiated by this extension.
+>
+> Also two session rules, present only while an InfoGata app tab has the hidden
+> youtube.com frame described under `scripting`. One lets the app embed that
+> single marked URL by removing its `X-Frame-Options` and
+> `Content-Security-Policy`, only when an authorized app is the one embedding
+> it. The other keeps the frame anonymous: requests the youtube.com page makes
+> in that tab go out without cookies and cannot set any, so the user's own
+> YouTube account is never involved. Both are removed when the frame is.
 
 ### `webRequestBlocking` (Firefox / MV2 only)
 
-> The Manifest V2 equivalent of the `declarativeNetRequest` rule above: strips
-> the extension's own `Origin` header from its requests to youtube.com. Not
-> requested on Chrome.
+> The Manifest V2 equivalent of the `declarativeNetRequest` rules above: strips
+> the extension's own `Origin` header from its requests to youtube.com, and
+> makes the header changes for the hidden youtube.com frame. Not requested on
+> Chrome.
 
 ## Data usage disclosures (Chrome Web Store)
 
@@ -106,7 +132,9 @@ developer or any third party. Chrome's disclosure asks whether data is
 
 **Website content.** The extension fetches pages at a plugin's request and hands
 the response back to the page that asked, in the same browser. It does not read,
-log, or retain that content.
+log, or retain that content. The hidden youtube.com frame used for playback
+tokens is loaded without the user's cookies; the only thing taken from it is
+the token, which goes to the app page that asked.
 
 Certifications, all of which hold:
 
@@ -152,4 +180,14 @@ broad for what the extension does:
 > opens a consent window naming the exact host, and stores the user's answer for
 > review and revocation in the popup. Patterns with a wildcard host are rejected
 > outright, so a plugin cannot ask for "every site." The same consent step gates
-> the login-capture flow. Source: https://github.com/InfoGata/infogata-extension
+> the login-capture flow.
+>
+> To play YouTube, the extension needs a token from YouTube's own anti-abuse
+> check, which only works on youtube.com. It embeds a hidden youtube.com frame
+> in the InfoGata app's tab (header changes scoped to that one marked URL,
+> embedded by an authorized app), injects a single packaged script, and calls
+> the check that youtube.com's own page loaded. The extension never fetches or
+> evaluates remote code itself. The frame carries no cookies in either
+> direction, and is removed when unused. Plugins pass only data (an origin from
+> a fixed list and a validated video id), never code.
+> Source: https://github.com/InfoGata/infogata-extension

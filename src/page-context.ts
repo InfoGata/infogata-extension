@@ -1,4 +1,5 @@
 import { urlMatchesPattern } from "./redirect-utils";
+import { runPageScriptMv2 } from "./page-script";
 import { credentialPatternHost, hostFromUrl } from "./credential-hosts";
 import type { NetworkRequestOptions } from "./types";
 
@@ -117,9 +118,9 @@ const isMv3 = import.meta.env.MANIFEST_VERSION === 3;
  * Runs a function in the page's own context.
  *
  * MV3 injects the function directly. Firefox's MV2 has no `scripting` API and no
- * MAIN world, so the function is serialized into a `code` string and reaches the
- * page through `wrappedJSObject` -- a content script's own `fetch` runs under the
- * extension principal, which is not the same-origin request this exists to make.
+ * MAIN world, so the function is serialized and run as a <script> element by
+ * `runPageScriptMv2` -- a content script's own `fetch` runs under the extension
+ * principal, which is not the same-origin request this exists to make.
  */
 const runInPage = async <T>(
   tabId: number,
@@ -138,45 +139,14 @@ const runInPage = async <T>(
     return results[0]?.result as T | undefined;
   }
 
-  // Firefox MV2 has no MAIN world. Injecting into the content script is not
-  // enough: `fetch` there resolves lexically to the sandbox's own global, so the
-  // request goes out under the extension principal rather than as the page --
-  // which is the whole thing this transport exists to avoid. So the function is
-  // written into a real <script> element, which does run as the page, and the
-  // result comes back through postMessage. The site serves no CSP on its real
-  // pages, so an inline script is allowed.
-  const id = `pc_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  const pageScript =
-    `Promise.resolve((${func.toString()}).apply(null, ${JSON.stringify(args)}))` +
-    `.then(function (r) { window.postMessage({ __pageContextId: ${JSON.stringify(id)}, result: r }, "*"); })` +
-    `.catch(function (e) { window.postMessage({ __pageContextId: ${JSON.stringify(id)},` +
-    ` result: { error: String(e && e.message ? e.message : e) } }, "*"); });`;
-
-  const code = `(function () {
-    return new Promise(function (resolve) {
-      var settle = function (value) {
-        clearTimeout(timer);
-        window.removeEventListener("message", onMessage);
-        resolve(value);
-      };
-      var timer = setTimeout(function () { settle(undefined); }, ${PAGE_SCRIPT_TIMEOUT_MS});
-      var onMessage = function (event) {
-        if (event.source !== window) return;
-        if (!event.data || event.data.__pageContextId !== ${JSON.stringify(id)}) return;
-        settle(event.data.result);
-      };
-      window.addEventListener("message", onMessage);
-      var script = document.createElement("script");
-      script.textContent = ${JSON.stringify(pageScript)};
-      (document.head || document.documentElement).appendChild(script);
-      script.remove();
-    });
-  })()`;
-
-  const results = (await browser.tabs.executeScript(tabId, { code })) as
-    | (T | undefined)[]
-    | undefined;
-  return results?.[0];
+  // A content script's own `fetch` runs under the extension principal, which is
+  // not the same-origin request this exists to make, so the function has to run
+  // as the page. The site serves no CSP on its real pages, so the inline script
+  // this uses is allowed.
+  return await runPageScriptMv2<T>(tabId, {
+    expression: `(${func.toString()}).apply(null, ${JSON.stringify(args)})`,
+    timeoutMs: PAGE_SCRIPT_TIMEOUT_MS,
+  });
 };
 
 /**

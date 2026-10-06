@@ -37,7 +37,24 @@ export type BackgroundMessage =
   | BackgroundSetDefaultRedirectOrigin
   | BackgroundConsentDecision
   | BackgroundGetCredentialHosts
-  | BackgroundRevokeCredentialHost;
+  | BackgroundRevokeCredentialHost
+  | BackgroundMintPoToken
+  | BackgroundPoMinterFrame;
+
+/** Sent by the minter frame on MV2 so the background learns its frame id. */
+export type BackgroundPoMinterFrame = {
+  type: "po-minter-frame";
+};
+
+export type BackgroundMintPoToken = {
+  type: "mint-po-token";
+  origin: string;
+  contentBinding: string;
+  overrides?: unknown;
+};
+
+/** The background's answer to a mint: a token, or why there is none. */
+export type MintPoTokenResult = { token: string } | { error: RequestFailure };
 
 /** Why the user is being asked to hand a plugin their login for a host. */
 export type ConsentKind = "request" | "login" | "page-context";
@@ -77,7 +94,20 @@ export type HookGetVersion = {
   uid: number;
 };
 
-export type HookMessage = HookRequest | HookOpenLogin | HookGetVersion | HookRegisterRedirects;
+export type HookMintPoToken = {
+  type: "infogata-extension-mint-po-token-hook";
+  origin: string;
+  contentBinding: string;
+  overrides?: unknown;
+  uid: number;
+};
+
+export type HookMessage =
+  | HookRequest
+  | HookOpenLogin
+  | HookGetVersion
+  | HookRegisterRedirects
+  | HookMintPoToken;
 
 export type ContentResponse = {
   type: "infogata-extension-response";
@@ -109,10 +139,18 @@ export type ContentNotifyLogin = {
   domainHeaders: Record<string, Record<string, string>>;
 };
 
+export type ContentMintPoToken = {
+  type: "infogata-extension-mint-po-token-content";
+  token?: string;
+  error?: RequestFailure;
+  uid: number;
+};
+
 export type ContentMessage =
   | ContentResponse
   | ContentGetVersion
-  | ContentNotifyLogin;
+  | ContentNotifyLogin
+  | ContentMintPoToken;
 
 export type NotifyLogin = {
   type: "notify-login";
@@ -121,7 +159,17 @@ export type NotifyLogin = {
   domainHeaders: Record<string, Record<string, string>>;
 };
 
-export type TabMessage = NotifyLogin;
+/** Adds the hidden minter frame; answers whether it loaded. */
+export type CreatePoFrame = {
+  type: "create-po-frame";
+  url: string;
+};
+
+export type RemovePoFrame = {
+  type: "remove-po-frame";
+};
+
+export type TabMessage = NotifyLogin | CreatePoFrame | RemovePoFrame;
 
 export type LoginMessage = LoginButtonMessage;
 

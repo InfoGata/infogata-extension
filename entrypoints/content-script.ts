@@ -8,6 +8,8 @@ import type {
   HookOpenLogin,
   TabMessage,
   HookGetVersion,
+  HookMintPoToken,
+  MintPoTokenResult,
 } from "../src/types";
 
 export default defineUnlistedScript(() => {
@@ -107,6 +109,63 @@ export default defineUnlistedScript(() => {
       });
     };
 
+    /** Answers the page exactly once, like makeNetworkRequest. */
+    const mintPoToken = async (request: HookMintPoToken) => {
+      try {
+        const response: MintPoTokenResult | undefined = await sendMessageToBackground({
+          type: "mint-po-token",
+          origin: request.origin,
+          contentBinding: request.contentBinding,
+          overrides: request.overrides,
+        });
+        if (!response) {
+          throw new Error("The extension returned no response");
+        }
+        sendMessageToHook({
+          type: "infogata-extension-mint-po-token-content",
+          uid: request.uid,
+          ...("error" in response ? { error: response.error } : { token: response.token }),
+        });
+      } catch (error: any) {
+        sendMessageToHook({
+          type: "infogata-extension-mint-po-token-content",
+          uid: request.uid,
+          error: {
+            message: String(error?.message ?? error ?? "Minting failed"),
+            name: error?.name,
+          },
+        });
+      }
+    };
+
+    // The minter frame sits in the app's page, but only the background creates
+    // it or runs anything in it; the page just gets tokens back.
+    let poFrame: HTMLIFrameElement | undefined;
+
+    const createPoFrame = (url: string): Promise<boolean> => {
+      poFrame?.remove();
+      const frame = document.createElement("iframe");
+      frame.src = url;
+      frame.style.display = "none";
+      frame.setAttribute("aria-hidden", "true");
+      frame.tabIndex = -1;
+      poFrame = frame;
+      return new Promise((resolve) => {
+        // A frame that fails still fires load, so this only guards a hang.
+        const timer = setTimeout(() => resolve(false), 30_000);
+        frame.addEventListener("load", () => {
+          clearTimeout(timer);
+          resolve(true);
+        }, { once: true });
+        (document.body ?? document.documentElement).appendChild(frame);
+      });
+    };
+
+    const removePoFrame = () => {
+      poFrame?.remove();
+      poFrame = undefined;
+    };
+
     const onHookMessage = async (e: MessageEvent<HookMessage>) => {
       if (e.source !== window || !e.data) {
         return;
@@ -121,6 +180,9 @@ export default defineUnlistedScript(() => {
           break;
         case "infogata-extension-getversion-hook":
           getVersion(e.data);
+          break;
+        case "infogata-extension-mint-po-token-hook":
+          await mintPoToken(e.data);
           break;
         case "infogata-extension-register-redirects":
           sendMessageToBackground({
@@ -138,12 +200,20 @@ export default defineUnlistedScript(() => {
     function destructor() {
       document.removeEventListener(destructionEvent, destructor);
       window.removeEventListener("message", onHookMessage);
+      removePoFrame();
     }
     const destructionEvent = "destructmyextension_" + browser.runtime.id;
     document.dispatchEvent(new CustomEvent(destructionEvent));
     document.addEventListener(destructionEvent, destructor);
 
     browser.runtime.onMessage.addListener((message: TabMessage) => {
+      if (message.type === "create-po-frame") {
+        return createPoFrame(message.url);
+      }
+      if (message.type === "remove-po-frame") {
+        removePoFrame();
+        return;
+      }
       if (message.type === "notify-login") {
         sendMessageToHook({
           type: "infogata-extension-notify-login",

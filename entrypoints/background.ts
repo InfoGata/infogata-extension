@@ -20,8 +20,16 @@ import {
   pageContextFetch,
   pageContextHostFor,
 } from "../src/page-context";
+import { checkPoTokenRequest } from "../src/po-token-providers";
+import {
+  mintPoToken,
+  onMinterFrameAnnounced,
+  onMinterTabNavigated,
+  onMinterTabRemoved,
+} from "../src/po-token-minter";
 import type {
   BackgroundMessage,
+  MintPoTokenResult,
   ConsentKind,
   ExecuteScriptOptions,
   HandleRequestResponse,
@@ -352,7 +360,13 @@ export default defineBackground(() => {
     }
   });
 
-  browser.tabs.onUpdated.addListener(async (tabId, _info, tab) => {
+  // A closed app tab takes its minter frame with it, and the providers' framing
+  // protections come back once no tab has one.
+  browser.tabs.onRemoved.addListener((tabId) => onMinterTabRemoved(tabId));
+
+  browser.tabs.onUpdated.addListener(async (tabId, info, tab) => {
+    if (info.url) onMinterTabNavigated(tabId, info.url);
+
     if (tab.status !== "loading" && tab.url) {
       const url = new URL(tab.url);
       if (origins.includes(url.origin)) {
@@ -749,8 +763,49 @@ export default defineBackground(() => {
         });
       return true; // Indicates that the response is sent asynchronously
     }
-    
+
+    if (message.type === "mint-po-token") {
+      const respondWithError = (error: unknown) => {
+        sendResponse({
+          error: {
+            message: String((error as Error)?.message ?? error ?? "Minting failed"),
+            name: (error as Error)?.name,
+          },
+        } satisfies MintPoTokenResult);
+      };
+      ready
+        .then(() => {
+          // Only an app the user authorized, and only from its own tab: the
+          // frame goes into that tab.
+          const appOrigin = senderOrigin(sender);
+          const tabId = sender.tab?.id;
+          if (!appOrigin || !origins.includes(appOrigin) || tabId === undefined) {
+            throw new Error("Not allowed to mint tokens from here");
+          }
+          const check = checkPoTokenRequest(
+            message.origin,
+            message.contentBinding,
+            message.overrides
+          );
+          if (!check.ok) throw new Error(check.error);
+          return mintPoToken(
+            tabId,
+            appOrigin,
+            origins,
+            check.provider,
+            check.config,
+            message.contentBinding
+          );
+        })
+        .then((token) => sendResponse({ token } satisfies MintPoTokenResult))
+        .catch(respondWithError);
+      return true;
+    }
+
     switch (message.type) {
+      case "po-minter-frame":
+        onMinterFrameAnnounced(sender);
+        break;
       case "execute-hook":
         if (sender.tab) {
           if (sender.tab.id) {

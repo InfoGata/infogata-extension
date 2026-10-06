@@ -7,6 +7,34 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Proof-of-origin tokens.** YouTube now streams only about a minute of most
+  videos to a client that cannot show a token from its BotGuard check, and that
+  check yields a usable token only on youtube.com, so a plugin cannot mint one.
+  `window.InfoGata.mintPoToken(origin, contentBinding, overrides?)` mints it in
+  a hidden youtube.com frame inside the calling app's tab. The API names no
+  site; what YouTube needs is a provider table in the extension, and the page
+  supplies only data. The frame uses the BotGuard VM youtube.com's own page
+  loads, so the extension never fetches or evaluates remote code. Unlike
+  page-context, which parks a pinned tab because its sites refuse to be framed,
+  the provider's framing headers are lifted for the one marked minter url, only
+  when an authorized app embeds it, so a music app does not keep a tab open.
+  Works in Chrome and Firefox.
+- **The minter frame is anonymous.** Its load and every request its page makes
+  go out without cookies, and its responses cannot set any, so the user's
+  YouTube account is never involved. That is also why it asks no consent.
+  Header changes and cookie stripping exist only while a tab has a frame, which
+  is removed after ten idle minutes, when the tab closes, or when it leaves the
+  app.
+
+### Changed
+
+- The Firefox path that runs a function as the page (`<script>` element plus
+  `postMessage`) moved from `page-context.ts` to `src/page-script.ts`, so the
+  minter shares it. It now also reports an error the function throws before
+  returning a promise.
+
 ## [1.4.0] — 2026-09-04
 
 ### Added
