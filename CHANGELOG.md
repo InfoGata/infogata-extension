@@ -7,6 +7,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-10-06
+
 ### Added
 
 - **Proof-of-origin tokens.** YouTube now streams only about a minute of most
@@ -179,7 +181,8 @@ First release.
 - The extension's own `Origin` header is stripped from its requests to
   youtube.com, which otherwise rejects them.
 
-[Unreleased]: https://github.com/InfoGata/infogata-extension/compare/1.4.0...HEAD
+[Unreleased]: https://github.com/InfoGata/infogata-extension/compare/1.5.0...HEAD
+[1.5.0]: https://github.com/InfoGata/infogata-extension/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/InfoGata/infogata-extension/compare/1.3.0...1.4.0
 [1.3.0]: https://github.com/InfoGata/infogata-extension/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/InfoGata/infogata-extension/compare/1.1.0...1.2.0
