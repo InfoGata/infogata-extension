@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pageContextHostFor } from "../src/page-context";
+import { looksAnubisChallenged, pageContextHostFor } from "../src/page-context";
 
 describe("pageContextHostFor", () => {
   const options = { pageContextPatterns: ["https://twstalker.com/*"] };
@@ -45,5 +45,31 @@ describe("pageContextHostFor", () => {
         siteMatchPatterns: ["https://twstalker.com/*"],
       })
     ).toBe(undefined);
+  });
+});
+
+describe("looksAnubisChallenged", () => {
+  const response = (body: string) => ({
+    status: 200,
+    statusText: "OK",
+    headers: {},
+    body,
+  });
+
+  it("spots the proof-of-work page, which lobste.rs serves as a 200", () => {
+    expect(
+      looksAnubisChallenged(
+        response(
+          '<title>Making sure you&#39;re not a bot!</title>' +
+            '<script id="anubis_challenge" type="application/json">{}</script>'
+        )
+      )
+    ).toBe(true);
+  });
+
+  it("passes the real page", () => {
+    expect(
+      looksAnubisChallenged(response('<li data-shortid="abc123">story</li>'))
+    ).toBe(false);
   });
 });

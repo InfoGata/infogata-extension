@@ -7,6 +7,26 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Page-context requests get past Anubis.** lobste.rs guards only `/search`
+  with an Anubis proof-of-work check, so the page parked on the origin never
+  ran it, and the origin's landing page serves `connect-src 'none'`, which
+  refused the in-page fetch outright. When a GET comes back as the Anubis page
+  or fails, the extension now opens its own pinned tab on the origin, follows
+  it to the requested url from inside the page (lobste.rs sends an empty 403
+  for a /search load with no Referer, which a new tab would be), lets the check
+  clear there and retries from that page. A tab stuck on the browser's error
+  page now counts as a failed request, so it is replaced instead of failing
+  every search.
+- **A borrowed tab is left alone.** Page-context reuses a tab the user already
+  has open on the site; it used to close that tab when it went idle or when
+  clearance expired. It now closes only tabs it opened.
+- **Firefox: page-context on sites whose CSP forbids inline scripts.** The
+  injected script is now noticed as blocked straight away instead of after the
+  20 second timeout, and the request falls back to the content script's
+  `content.fetch`, which still goes out as the page.
+
 ## [1.5.0] — 2026-10-06
 
 ### Added

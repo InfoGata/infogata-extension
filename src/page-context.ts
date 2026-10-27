@@ -75,16 +75,26 @@ const probeChallenge = (): boolean => {
   }
   if (document.getElementById("challenge-error-text")) return true;
   if (document.getElementById("cf-challenge-running")) return true;
+  // Anubis (lobste.rs): its proof-of-work page carries the challenge as JSON.
+  if (document.getElementById("anubis_challenge")) return true;
   return typeof (window as unknown as { _cf_chl_opt?: unknown })._cf_chl_opt !==
     "undefined";
 };
 
+/**
+ * `viaContent` is for a Firefox content script, whose own `fetch` goes out
+ * under the extension principal; `content.fetch` is the page's.
+ */
 const runFetch = async (
   url: string,
-  init: { method?: string; headers?: Record<string, string>; body?: string }
+  init: { method?: string; headers?: Record<string, string>; body?: string },
+  viaContent = false
 ) => {
   try {
-    const response = await fetch(url, { ...init, credentials: "include" });
+    const request = { ...init, credentials: "include" as const };
+    const response = viaContent
+      ? await (globalThis as unknown as { content: Window }).content.fetch(url, request)
+      : await fetch(url, request);
     return {
       status: response.status,
       statusText: response.statusText,
@@ -204,6 +214,12 @@ const waitForChallenge = async (
 /** Origin -> the tab parked on it. */
 const parkedTabs = new Map<string, number>();
 
+/**
+ * The parked tabs this extension opened. A tab the user already had open on the
+ * site is borrowed, never navigated or closed.
+ */
+const ownedTabs = new Set<number>();
+
 const tabIsUsable = async (tabId: number, origin: string): Promise<boolean> => {
   try {
     const tab = await browser.tabs.get(tabId);
@@ -227,6 +243,42 @@ const ensureTab = async (origin: string): Promise<number> => {
     return reusable.id;
   }
 
+  return await openTab(origin, origin);
+};
+
+/**
+ * Sends the tab to `url` from inside the page, the way following a link would.
+ *
+ * lobste.rs answers a /search request with no Referer with an empty 403, which
+ * the browser shows as its own error page, and a tab created or updated on a
+ * url carries none. Navigating from one of the site's own pages sends it.
+ */
+const navigateInPage = async (tabId: number, url: string) => {
+  const navigate = (target: string) => {
+    location.href = target;
+  };
+  if (isMv3) {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: navigate,
+      args: [url],
+    });
+    return;
+  }
+  await browser.tabs.executeScript(tabId, {
+    code: `(${navigate.toString()})(${JSON.stringify(url)})`,
+  });
+};
+
+/**
+ * Opens a tab of our own on `url` and waits for the site's bot check to clear.
+ *
+ * Usually `url` is just the origin. A check that guards only some paths (Anubis
+ * on lobste.rs/search) never runs there, so the tab has to load the guarded url
+ * itself to earn the cookie the in-page fetch then carries. It gets there from
+ * the origin's own page; see `navigateInPage`.
+ */
+const openTab = async (origin: string, url: string): Promise<number> => {
   // Inactive so it never takes focus -- the bot check completes in a background
   // tab -- and pinned, so it sits at the far left as a favicon rather than a
   // full tab the user did not open. A browser extension cannot create an
@@ -241,7 +293,14 @@ const ensureTab = async (origin: string): Promise<number> => {
     throw new Error("Could not open a page-context tab");
   }
   parkedTabs.set(origin, tab.id);
+  ownedTabs.add(tab.id);
   await waitForTabLoad(tab.id);
+  if (url !== origin) {
+    // Listening before navigating, so a fast load can't complete unseen.
+    const loaded = waitForTabLoad(tab.id);
+    await navigateInPage(tab.id, url);
+    await loaded;
+  }
   await waitForChallenge(tab.id, origin);
   await labelTab(tab.id);
   return tab.id;
@@ -280,7 +339,7 @@ const scheduleIdleClose = (origin: string) => {
 export const closePageContext = async (origin: string) => {
   const tabId = parkedTabs.get(origin);
   parkedTabs.delete(origin);
-  if (tabId === undefined) return;
+  if (tabId === undefined || !ownedTabs.delete(tabId)) return;
   try {
     await browser.tabs.remove(tabId);
   } catch {
@@ -294,6 +353,13 @@ const looksChallenged = (response: PageContextResponse): boolean =>
     response.body.slice(0, 4000)
   );
 
+/**
+ * Anubis answers a challenged request with its proof-of-work page, as a 200 on
+ * lobste.rs. The page has to be loaded to be solved; a fetch never solves it.
+ */
+export const looksAnubisChallenged = (response: PageContextResponse): boolean =>
+  response.body.includes('id="anubis_challenge"');
+
 const fetchInTab = async (
   tabId: number,
   url: string,
@@ -306,18 +372,42 @@ const fetchInTab = async (
         ? Object.fromEntries(init.headers.entries())
         : undefined;
 
-  return await runInPage<PageContextResponse | { error: string }>(
-    tabId,
-    runFetch as (...args: never[]) => Promise<PageContextResponse | { error: string }>,
-    [
-      url,
-      {
-        method: init?.method,
-        headers,
-        body: typeof init?.body === "string" ? init.body : undefined,
-      },
-    ]
-  );
+  const pageInit = {
+    method: init?.method,
+    headers,
+    body: typeof init?.body === "string" ? init.body : undefined,
+  };
+  let result: PageContextResponse | { error: string } | undefined;
+  try {
+    result = await runInPage<PageContextResponse | { error: string }>(
+      tabId,
+      runFetch as (...args: never[]) => Promise<PageContextResponse | { error: string }>,
+      [url, pageInit]
+    );
+  } catch (e) {
+    // The tab is on the browser's own error page ("Frame with ID 0 is showing
+    // error page"), or went away. An error result lets the caller reload it.
+    return { error: String((e as Error)?.message ?? e) };
+  }
+  if (result !== undefined || isMv3) return result;
+  return await contentFetchMv2(tabId, url, pageInit);
+};
+
+/**
+ * Firefox's fallback when the page's CSP blocks the injected script (lobste.rs
+ * allows only `script-src 'self'`). `content.fetch` in a content script goes
+ * out as the page -- its origin, its cookies -- which is all the request needs.
+ */
+const contentFetchMv2 = async (
+  tabId: number,
+  url: string,
+  init: { method?: string; headers?: Record<string, string>; body?: string }
+): Promise<PageContextResponse | { error: string } | undefined> => {
+  const code = `(${runFetch.toString()}).apply(null, ${JSON.stringify([url, init, true])})`;
+  const results = (await browser.tabs.executeScript(tabId, { code })) as
+    | (PageContextResponse | { error: string } | undefined)[]
+    | undefined;
+  return results?.[0];
 };
 
 /** Runs the request inside a page on its own origin. */
@@ -334,6 +424,21 @@ export const pageContextFetch = async (
   if (result && !("error" in result) && looksChallenged(result)) {
     await closePageContext(origin);
     tabId = await ensureTab(origin);
+    result = await fetchInTab(tabId, url, init);
+  }
+
+  // Anubis guards paths, not the origin, so the tab loads the guarded url and
+  // solves the check there. The same load rescues a fetch the parked page's
+  // CSP refused: lobste.rs serves `connect-src 'none'` on its cached pages,
+  // the origin's landing page among them, but not on /search. Only a GET can
+  // be replayed as a navigation.
+  const method = (init?.method ?? "GET").toUpperCase();
+  if (
+    method === "GET" &&
+    (!result || "error" in result || looksAnubisChallenged(result))
+  ) {
+    await closePageContext(origin);
+    tabId = await openTab(origin, url);
     result = await fetchInTab(tabId, url, init);
   }
 

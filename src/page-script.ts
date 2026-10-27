@@ -7,7 +7,8 @@
  * the page's own globals are out of reach. So the source is written into a real
  * <script> element, which does run as the page, and the result comes back
  * through postMessage. The page must allow inline scripts: either it serves no
- * CSP, or the extension removed it for this document.
+ * CSP, or the extension removed it for this document. When the CSP blocks the
+ * script this resolves undefined straight away rather than at the timeout.
  *
  * `expression` is JavaScript that evaluates to the result or a promise of it.
  * `prelude` is run first in the same script, for code that sets up globals.
@@ -35,6 +36,7 @@ export const runPageScriptMv2 = async <T>(
       var settle = function (value) {
         clearTimeout(timer);
         window.removeEventListener("message", onMessage);
+        document.removeEventListener("securitypolicyviolation", onViolation);
         resolve(value);
       };
       var timer = setTimeout(function () { settle(undefined); }, ${options.timeoutMs});
@@ -44,6 +46,12 @@ export const runPageScriptMv2 = async <T>(
         settle(event.data.result);
       };
       window.addEventListener("message", onMessage);
+      // A page CSP that forbids inline scripts blocks the element silently;
+      // without this the caller would wait out the whole timeout.
+      var onViolation = function (event) {
+        if (/^script-src/.test(event.violatedDirective || "")) settle(undefined);
+      };
+      document.addEventListener("securitypolicyviolation", onViolation);
       var script = document.createElement("script");
       script.textContent = ${JSON.stringify(pageScript)};
       (document.head || document.documentElement).appendChild(script);
