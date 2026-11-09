@@ -7,6 +7,23 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Progress and cancelling for `networkRequest`.** `options.onProgress` is
+  called with `{ loaded, total }` as the response body arrives (`total` only
+  when the server states an uncompressed length), and `init.signal` cancels the
+  request, aborting the download in the extension too.
+
+### Fixed
+
+- **Responses of any size.** A response used to travel in one message, which
+  chrome caps at 64 MiB; with base64 that meant a file over about 48 MB could
+  not be fetched at all. The body now streams from the background in chunks,
+  each acknowledged before the next is read.
+- **Long downloads no longer time out.** The 60 second timeout now restarts on
+  every chunk, so it only fires when nothing arrives, instead of failing any
+  request that took longer than a minute in total.
+
 ## [1.5.1] — 2026-10-27
 
 ### Fixed

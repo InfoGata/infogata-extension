@@ -2,7 +2,8 @@ import type {
   ContentMessage,
   HookMessage,
   NetworkRequest,
-  NetworkRequestOptions,
+  NetworkRequestProgress,
+  PageNetworkRequestOptions,
   SerializableRequestInit,
 } from "./types";
 
@@ -22,6 +23,11 @@ import type {
  * page is not allowed to touch. The page sees `Permission denied to access
  * property "then"` instead of a response. So the page's promise is constructed
  * first and synchronously, and the async work happens inside it.
+ *
+ * `init.signal` cancels the request, and `options.onProgress` hears about the
+ * response body as it streams in. The timeout is for silence, not the whole
+ * request: each piece of progress restarts it, so a long download of a large
+ * file isn't cut off while data is still arriving.
  */
 
 export interface HookRequestDeps {
@@ -43,6 +49,13 @@ export interface HookRequestDeps {
   timeoutMs?: number;
   setTimer?: (fn: () => void, ms: number) => unknown;
   clearTimer?: (handle: unknown) => void;
+  /**
+   * The page's progress callback. In Firefox a function on the page's options
+   * object may not be visible through the Xray, so the hook reads it past it.
+   */
+  readOnProgress?: (
+    options: PageNetworkRequestOptions | undefined
+  ) => ((progress: NetworkRequestProgress) => void) | undefined;
 }
 
 export const DEFAULT_REQUEST_TIMEOUT_MS = 60_000;
@@ -51,9 +64,17 @@ export const createNetworkRequestFn = (deps: HookRequestDeps) => {
   return (
     input: string,
     init?: RequestInit,
-    options?: NetworkRequestOptions
+    options?: PageNetworkRequestOptions
   ): Promise<NetworkRequest> => {
     const uid = deps.nextUid();
+    const onProgress = deps.readOnProgress
+      ? deps.readOnProgress(options)
+      : options?.onProgress;
+    // Everything but the callback goes to the content script.
+    const sendableOptions = options
+      ? (({ onProgress: _onProgress, ...rest }) => rest)(options)
+      : undefined;
+    const signal = init?.signal ?? undefined;
 
     return new deps.PromiseCtor<NetworkRequest>((resolve, reject) => {
       let timer: unknown;
@@ -63,6 +84,7 @@ export const createNetworkRequestFn = (deps: HookRequestDeps) => {
         if (settled) return;
         settled = true;
         deps.removeListener(onMessage);
+        signal?.removeEventListener("abort", onAbort);
         if (timer !== undefined) deps.clearTimer?.(timer);
         fn();
       };
@@ -70,9 +92,41 @@ export const createNetworkRequestFn = (deps: HookRequestDeps) => {
       const fail = (message: string, name = "Error") =>
         settle(() => reject(deps.clone({ message, name })));
 
+      // A backstop for a message that never arrives at all — a dead service
+      // worker, or a content script that was torn down mid-request. Restarted
+      // by progress, so it measures silence rather than the whole download.
+      const timeoutMs = deps.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+      const startTimer = () => {
+        if (!deps.setTimer || timeoutMs <= 0) return;
+        if (timer !== undefined) deps.clearTimer?.(timer);
+        timer = deps.setTimer(
+          () => fail(`The request to ${input} received no response`, "TimeoutError"),
+          timeoutMs
+        );
+      };
+
+      const onAbort = () => {
+        if (settled) return;
+        deps.sendMessage({ type: "infogata-extension-abort", uid });
+        fail("The request was aborted", "AbortError");
+      };
+
       const onMessage = (e: MessageEvent<ContentMessage>) => {
         if (!deps.isOwnSource(e) || !e.data) return;
         if ("uid" in e.data && e.data.uid !== uid) return;
+        if (e.data.type === "infogata-extension-progress") {
+          startTimer();
+          try {
+            onProgress?.(
+              deps.clone({ loaded: e.data.loaded, total: e.data.total })
+            );
+          } catch (error) {
+            // The page's callback throwing is the page's problem; the
+            // download carries on.
+            console.error(error);
+          }
+          return;
+        }
         if (e.data.type !== "infogata-extension-response") return;
 
         const { result, error } = e.data;
@@ -87,17 +141,13 @@ export const createNetworkRequestFn = (deps: HookRequestDeps) => {
         settle(() => resolve(deps.clone(result)));
       };
 
-      deps.addListener(onMessage);
-
-      // A backstop for a message that never arrives at all — a dead service
-      // worker, or a content script that was torn down mid-request.
-      const timeoutMs = deps.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
-      if (deps.setTimer && timeoutMs > 0) {
-        timer = deps.setTimer(
-          () => fail(`The request to ${input} received no response`, "TimeoutError"),
-          timeoutMs
-        );
+      if (signal?.aborted) {
+        fail("The request was aborted", "AbortError");
+        return;
       }
+      signal?.addEventListener("abort", onAbort);
+      deps.addListener(onMessage);
+      startTimer();
 
       const send = (serializedInit?: SerializableRequestInit) => {
         if (settled) return;
@@ -106,7 +156,7 @@ export const createNetworkRequestFn = (deps: HookRequestDeps) => {
           input,
           init: serializedInit,
           uid,
-          options,
+          options: sendableOptions,
         });
       };
 

@@ -122,6 +122,18 @@ export default defineUnlistedScript(() => {
       isOwnSource: (e) => e.source === window,
       setTimer: (fn, ms) => window.setTimeout(fn, ms),
       clearTimer: (handle) => window.clearTimeout(handle as number),
+      // In Firefox this script runs in the content script's sandbox, and an
+      // Xray onto the page's options object may hide a function-valued
+      // property; the waived object shows it. Elsewhere there is no Xray and
+      // `wrappedJSObject` is undefined.
+      readOnProgress: (options) => {
+        const raw = (options as { wrappedJSObject?: typeof options } | undefined)
+          ?.wrappedJSObject ?? options;
+        const onProgress = raw?.onProgress;
+        return typeof onProgress === "function"
+          ? (progress) => onProgress(progress)
+          : undefined;
+      },
     }),
     /**
      * A proof-of-origin token for `contentBinding`, minted on `origin` by the

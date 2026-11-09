@@ -22,6 +22,12 @@ import {
 } from "../src/page-context";
 import { checkPoTokenRequest } from "../src/po-token-providers";
 import {
+  STREAM_PORT_NAME,
+  serveStreamPort,
+  type BackgroundPort,
+  type PreparedResponse,
+} from "../src/request-stream";
+import {
   mintPoToken,
   onMinterFrameAnnounced,
   onMinterTabNavigated,
@@ -411,12 +417,18 @@ export default defineBackground(() => {
     return await response.blob();
   };
 
-  const handleRequest = async (
+  /**
+   * Makes the request a page asked for, with the consent checks, and returns
+   * the response with its body still unread, so the caller decides whether to
+   * buffer it or stream it.
+   */
+  const performRequest = async (
     input: string,
     init?: SerializableRequestInit,
     options?: NetworkRequestOptions,
-    requester = "an InfoGata app"
-  ): Promise<HandleRequestResponse> => {
+    requester = "an InfoGata app",
+    signal?: AbortSignal
+  ): Promise<PreparedResponse> => {
     const newInit: RequestInit = {};
 
     // Copy over serializable properties
@@ -448,7 +460,7 @@ export default defineBackground(() => {
       if (allowed) {
         const response = await pageContextFetch(input, newInit);
         return {
-          base64: await convertBlobToBase64(new Blob([response.body])),
+          body: new Blob([response.body]).stream(),
           headers: response.headers,
           status: response.status,
           statusText: response.statusText,
@@ -480,18 +492,35 @@ export default defineBackground(() => {
         );
       }
     }
-    const response = await fetch(input, newInit);
-    const blob = await response.blob();
-    const responseHeaders = Object.fromEntries(response.headers.entries());
-    const result = {
-      base64: await convertBlobToBase64(blob),
-      headers: responseHeaders,
+    const response = await fetch(input, { ...newInit, signal });
+    return {
+      body: response.body,
+      headers: Object.fromEntries(response.headers.entries()),
       status: response.status,
       statusText: response.statusText,
       url: response.url,
     };
+  };
 
-    return Promise.resolve(result);
+  /**
+   * The whole response in one message, for the one-shot `network-request`.
+   * Capped by the 64 MiB message limit; the content script streams over a
+   * port instead (see `src/request-stream.ts`).
+   */
+  const handleRequest = async (
+    input: string,
+    init?: SerializableRequestInit,
+    options?: NetworkRequestOptions,
+    requester = "an InfoGata app"
+  ): Promise<HandleRequestResponse> => {
+    const { body, ...response } = await performRequest(
+      input,
+      init,
+      options,
+      requester
+    );
+    const blob = await new Response(body).blob();
+    return { ...response, base64: await convertBlobToBase64(blob) };
   };
 
   const loadHook = (tabId: number) => {
@@ -738,6 +767,23 @@ export default defineBackground(() => {
       return undefined;
     }
   };
+
+  // The content script's requests: the response streams back in chunks.
+  browser.runtime.onConnect.addListener((port) => {
+    if (port.name !== STREAM_PORT_NAME) return;
+    const requester =
+      (port.sender && senderOrigin(port.sender)) ?? "an InfoGata app";
+    serveStreamPort(port as unknown as BackgroundPort, async (start, signal) => {
+      await ready;
+      return performRequest(
+        start.input,
+        start.init,
+        start.options,
+        requester,
+        signal
+      );
+    });
+  });
 
   browser.runtime.onMessage.addListener((message: BackgroundMessage, sender, sendResponse) => {
     if (message.type === "network-request") {

@@ -57,6 +57,7 @@ class TestFileReader {
 }
 
 let createWindow: ReturnType<typeof vi.fn>;
+let connectListener: ((port: unknown) => void) | undefined;
 let fetchMock: ReturnType<typeof vi.fn>;
 let nextWindowId = 100;
 
@@ -136,6 +137,14 @@ beforeEach(async () => {
     .onBeforeSendHeaders;
   onBeforeSendHeaders.addListener = vi.fn();
   onBeforeSendHeaders.removeListener = vi.fn();
+
+  // Nor ports: keep the worker's listener so a test can connect one.
+  connectListener = undefined;
+  (fakeBrowser.runtime.onConnect as any).addListener = vi.fn(
+    (listener: (port: unknown) => void) => {
+      connectListener = listener;
+    }
+  );
 
   createWindow = vi.fn(async () => {
     const id = nextWindowId++;
@@ -618,5 +627,51 @@ describe("redirect registration", () => {
       APP_ORIGIN,
       "https://www.videogata.com",
     ]);
+  });
+});
+
+describe("streamed requests", () => {
+  /** A port as the content script would open it, from the app's tab. */
+  const connect = () => {
+    const received: any[] = [];
+    const listeners: ((message: unknown) => void)[] = [];
+    const port = {
+      name: "infogata-network-request",
+      sender: pageSender(),
+      postMessage: (message: any) => {
+        received.push(message);
+        // The content script acknowledges each chunk.
+        if (message.type === "chunk") {
+          queueMicrotask(() => listeners.forEach((l) => l({ type: "ack" })));
+        }
+      },
+      onMessage: { addListener: (l: (message: unknown) => void) => listeners.push(l) },
+      onDisconnect: { addListener: () => {} },
+      disconnect: () => {},
+    };
+    connectListener!(port);
+    const send = (message: unknown) => listeners.forEach((l) => l(message));
+    return { received, send };
+  };
+
+  it("streams the response and keeps the consent rules of a one-shot request", async () => {
+    await start({
+      "bandcamp.com": { decision: "deny", requester: APP_ORIGIN, decidedAt: 1 },
+    });
+    const { received, send } = connect();
+
+    send({
+      type: "start",
+      input: "https://bandcamp.com/album/x",
+      options: { siteMatchPatterns: ["https://bandcamp.com/*"] },
+    });
+    await flush();
+
+    // A host the user said no to is still asked anonymously.
+    expect(credentialsUsed()).toBe("omit");
+    expect(consentWindows()).toHaveLength(0);
+    expect(received.map((m) => m.type)).toEqual(["head", "chunk", "end"]);
+    expect(received[0]).toMatchObject({ status: 200, statusText: "OK" });
+    expect(Buffer.from(received[1].data, "base64").toString()).toBe("body");
   });
 });

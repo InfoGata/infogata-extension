@@ -123,6 +123,17 @@ Page (hook.ts) → Content Script → Background Script → Network/Auth
                 ←                ←                  ←
 ```
 
+A `networkRequest`'s response comes back over a port, not a single message
+(`src/request-stream.ts`): the background sends the head, then the body in 4
+MiB chunks (base64, since chrome's messaging is JSON), waiting for the content
+script to acknowledge each before reading more. This is what lets a response
+exceed chrome's 64 MiB message limit. Each chunk is posted to the page as
+progress (`options.onProgress`), which also restarts the hook's 60 second
+timeout, so it measures silence rather than the whole download. The page
+cancels with `init.signal`; the content script closes the port and the
+background aborts its fetch. The one-shot `network-request` message still
+exists for the debug page and tests, buffered and capped as before.
+
 ### Key Differences: Chrome vs Firefox
 
 - **Manifest Version**: Chrome uses V3, Firefox uses V2

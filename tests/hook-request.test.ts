@@ -184,3 +184,75 @@ describe("createNetworkRequestFn", () => {
     await pending;
   });
 });
+
+describe("progress and cancelling", () => {
+  it("reports progress to the page and keeps the callback out of the message", async () => {
+    const { networkRequest, sent, deliver } = harness();
+    const onProgress = vi.fn();
+
+    const pending = networkRequest("https://example.com/book.epub", undefined, {
+      siteMatchPatterns: ["https://example.com/*"],
+      onProgress,
+    });
+    const uid = (sent[0] as { uid: number }).uid;
+    deliver({ type: "infogata-extension-progress", uid, loaded: 0, total: 9 });
+    deliver({ type: "infogata-extension-progress", uid, loaded: 9, total: 9 });
+    // Another request's progress isn't ours.
+    deliver({ type: "infogata-extension-progress", uid: uid + 1, loaded: 5 });
+    deliver({ type: "infogata-extension-response", uid, result: okResult });
+
+    await expect(pending).resolves.toEqual(okResult);
+    expect(onProgress.mock.calls).toEqual([
+      [{ loaded: 0, total: 9 }],
+      [{ loaded: 9, total: 9 }],
+    ]);
+    // A function can't be posted; the rest of the options still go.
+    expect((sent[0] as any).options).toEqual({
+      siteMatchPatterns: ["https://example.com/*"],
+    });
+  });
+
+  it("measures the timeout from the last progress, not the start", async () => {
+    const { networkRequest, sent, deliver, timers } = harness({ timeoutMs: 1000 });
+
+    const pending = networkRequest("https://example.com/book.epub");
+    const uid = (sent[0] as { uid: number }).uid;
+    deliver({ type: "infogata-extension-progress", uid, loaded: 1 });
+    deliver({ type: "infogata-extension-progress", uid, loaded: 2 });
+
+    // One timer at the start, and a fresh one per piece of progress.
+    expect(timers).toHaveLength(3);
+    // Only the latest one can fire; the earlier ones were cleared.
+    timers[2]!.fn();
+    await expect(pending).rejects.toMatchObject({ name: "TimeoutError" });
+  });
+
+  it("cancels through the request's signal", async () => {
+    const { networkRequest, sent, listeners } = harness();
+    const controller = new AbortController();
+
+    const pending = networkRequest("https://example.com/book.epub", {
+      signal: controller.signal,
+    });
+    await flush();
+    const uid = (sent[0] as { uid: number }).uid;
+    controller.abort();
+
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    // The content script is told, so it stops the download.
+    expect(sent).toContainEqual({ type: "infogata-extension-abort", uid });
+    expect(listeners).toHaveLength(0);
+  });
+
+  it("doesn't start a request whose signal is already aborted", async () => {
+    const { networkRequest, sent } = harness();
+
+    await expect(
+      networkRequest("https://example.com/book.epub", {
+        signal: AbortSignal.abort(),
+      })
+    ).rejects.toMatchObject({ name: "AbortError" });
+    await flush();
+    expect(sent).toHaveLength(0);
+  });
+});

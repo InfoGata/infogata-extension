@@ -1,8 +1,11 @@
+import {
+  STREAM_PORT_NAME,
+  receiveStreamedResponse,
+  type ContentPort,
+} from "../src/request-stream";
 import type {
   ContentMessage,
-  NetworkRequest,
   HookMessage,
-  HandleRequestResult,
   HookRequest,
   BackgroundMessage,
   HookOpenLogin,
@@ -34,48 +37,37 @@ export default defineUnlistedScript(() => {
       window.postMessage(message);
     };
 
-    const base64ToBlob = async (base64: string): Promise<Blob> => {
-      const response = await fetch(base64);
-      return await response.blob();
-    };
+    /** Downloads still running, so the page can cancel one. */
+    const activeRequests = new Map<number, () => void>();
 
     /**
      * Answers the page exactly once, whatever happens. A request that goes
      * unanswered leaves the page awaiting a promise that never settles, which
      * surfaces as an app that loads forever rather than one that reports a
      * problem.
+     *
+     * The response streams in over a port (see `src/request-stream.ts`), so
+     * its size isn't capped by the extension's message limit, and the page
+     * hears about each chunk as it arrives.
      */
     const makeNetworkRequest = async (request: HookRequest) => {
+      const port = browser.runtime.connect({ name: STREAM_PORT_NAME });
+      const { response, abort } = receiveStreamedResponse(
+        port as unknown as ContentPort,
+        { input: request.input, init: request.init, options: request.options },
+        {
+          onProgress: (loaded, total) =>
+            sendMessageToHook({
+              type: "infogata-extension-progress",
+              uid: request.uid,
+              loaded,
+              total,
+            }),
+        }
+      );
+      activeRequests.set(request.uid, abort);
       try {
-        const response: HandleRequestResult = await sendMessageToBackground({
-          type: "network-request",
-          input: request.input,
-          init: request.init,
-          options: request.options,
-        });
-
-        if (!response) {
-          throw new Error("The extension returned no response");
-        }
-        if ("error" in response) {
-          throw Object.assign(new Error(response.error.message), {
-            name: response.error.name ?? "Error",
-          });
-        }
-
-        let body =
-          typeof response.base64 === "string"
-            ? await base64ToBlob(response.base64)
-            : response.base64;
-
-        let result: NetworkRequest = {
-          body: body,
-          headers: response.headers,
-          status: response.status,
-          statusText: response.statusText,
-          url: response.url,
-        };
-
+        const result = await response;
         sendMessageToHook({
           type: "infogata-extension-response",
           result,
@@ -90,6 +82,8 @@ export default defineUnlistedScript(() => {
           },
           uid: request.uid,
         });
+      } finally {
+        activeRequests.delete(request.uid);
       }
     };
 
@@ -178,6 +172,9 @@ export default defineUnlistedScript(() => {
         case "infogata-extension-request":
           await makeNetworkRequest(e.data);
           break;
+        case "infogata-extension-abort":
+          activeRequests.get(e.data.uid)?.();
+          break;
         case "infogata-extension-getversion-hook":
           getVersion(e.data);
           break;
@@ -201,6 +198,7 @@ export default defineUnlistedScript(() => {
       document.removeEventListener(destructionEvent, destructor);
       window.removeEventListener("message", onHookMessage);
       removePoFrame();
+      for (const abort of activeRequests.values()) abort();
     }
     const destructionEvent = "destructmyextension_" + browser.runtime.id;
     document.dispatchEvent(new CustomEvent(destructionEvent));

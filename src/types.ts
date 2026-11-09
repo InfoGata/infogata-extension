@@ -102,8 +102,15 @@ export type HookMintPoToken = {
   uid: number;
 };
 
+/** The page gave up on a request; the content script stops its download. */
+export type HookAbortRequest = {
+  type: "infogata-extension-abort";
+  uid: number;
+};
+
 export type HookMessage =
   | HookRequest
+  | HookAbortRequest
   | HookOpenLogin
   | HookGetVersion
   | HookRegisterRedirects
@@ -119,6 +126,15 @@ export type ContentResponse = {
    */
   error?: RequestFailure;
   uid: number;
+};
+
+/** How much of a request's response body has arrived so far. */
+export type ContentProgress = {
+  type: "infogata-extension-progress";
+  uid: number;
+  loaded: number;
+  /** Absent when the server didn't say, or the body is compressed. */
+  total?: number;
 };
 
 export interface RequestFailure {
@@ -148,6 +164,7 @@ export type ContentMintPoToken = {
 
 export type ContentMessage =
   | ContentResponse
+  | ContentProgress
   | ContentGetVersion
   | ContentNotifyLogin
   | ContentMintPoToken;
@@ -196,6 +213,21 @@ export type HandleRequestResult =
 
 export interface NetworkRequest extends SharedRequest {
   body: Blob | ArrayBuffer | null;
+}
+
+/** Reported to `onProgress` as a response body arrives. */
+export interface NetworkRequestProgress {
+  loaded: number;
+  /** Absent when the server didn't say, or the body is compressed. */
+  total?: number;
+}
+
+/**
+ * What a page may pass to `InfoGata.networkRequest`. `onProgress` stays in the
+ * page: a function can't be posted to the content script.
+ */
+export interface PageNetworkRequestOptions extends NetworkRequestOptions {
+  onProgress?: (progress: NetworkRequestProgress) => void;
 }
 
 export interface NetworkRequestOptions {
