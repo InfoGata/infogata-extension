@@ -21,6 +21,11 @@ export default defineConfig({
   vite: () => ({
     plugins: [tailwindcss()],
   }),
+  zip: {
+    // Test coverage reports are local and git-ignored, but wxt zips sources
+    // from disk, so a leftover run used to end up in the AMO source archive.
+    excludeSources: ["coverage/**"],
+  },
   manifest: ({ browser }) => ({
     name: 'InfoGata Extension',
     description: 'Extension for Audiogata, Videogata, ReaderGata, and SocialGata',

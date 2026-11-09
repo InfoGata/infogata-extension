@@ -7,6 +7,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.6.0] — 2026-11-09
+
 ### Added
 
 - **Progress and cancelling for `networkRequest`.** `options.onProgress` is
@@ -23,6 +25,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Long downloads no longer time out.** The 60 second timeout now restarts on
   every chunk, so it only fires when nothing arrives, instead of failing any
   request that took longer than a minute in total.
+- **The source archive is source only.** Local test coverage reports were
+  being zipped into the archive AMO reviews; they're excluded now.
 
 ## [1.5.1] — 2026-10-27
 
@@ -220,7 +224,8 @@ First release.
 - The extension's own `Origin` header is stripped from its requests to
   youtube.com, which otherwise rejects them.
 
-[Unreleased]: https://github.com/InfoGata/infogata-extension/compare/1.5.1...HEAD
+[Unreleased]: https://github.com/InfoGata/infogata-extension/compare/1.6.0...HEAD
+[1.6.0]: https://github.com/InfoGata/infogata-extension/compare/1.5.1...1.6.0
 [1.5.1]: https://github.com/InfoGata/infogata-extension/compare/1.5.0...1.5.1
 [1.5.0]: https://github.com/InfoGata/infogata-extension/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/InfoGata/infogata-extension/compare/1.3.0...1.4.0
