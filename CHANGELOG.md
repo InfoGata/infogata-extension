@@ -7,6 +7,15 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Page-context requests wait out the bot checks in front of Nitter
+  instances.** Gandalf, Shield and r4fo's proof-of-work were not recognised, so
+  the parked tab fetched before the check cleared and handed back the check
+  page. They are now waited for like Cloudflare and Anubis, and a lapsed one is
+  re-earned by reloading the tab. Aragorn (a click) is recognised too, and ends
+  in the existing "complete it in the pinned tab" error.
+
 ## [1.6.0] — 2026-11-09
 
 ### Added

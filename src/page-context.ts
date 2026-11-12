@@ -70,13 +70,23 @@ export const pageContextHostFor = (
  */
 const probeChallenge = (): boolean => {
   const title = document.title || "";
-  if (/^Just a moment|Attention Required|Verifying your browser/i.test(title)) {
+  // "Checking your browser" is Shield and Aragorn, "Checking you are not a bot"
+  // r4fo's proof-of-work, both in front of Nitter instances. Aragorn wants a
+  // click; waiting on it ends in the "complete it in the pinned tab" error
+  // below, which is the right outcome for a check only a person can pass.
+  if (
+    /^(Just a moment|Attention Required|Verifying your browser|Checking your browser|Checking you are not a bot|Gandalf$)/i.test(
+      title
+    )
+  ) {
     return true;
   }
   if (document.getElementById("challenge-error-text")) return true;
   if (document.getElementById("cf-challenge-running")) return true;
   // Anubis (lobste.rs): its proof-of-work page carries the challenge as JSON.
   if (document.getElementById("anubis_challenge")) return true;
+  // Gandalf: a meta-refresh to /.gandalf/check, then a second step.
+  if (document.getElementById("g-container")) return true;
   return typeof (window as unknown as { _cf_chl_opt?: unknown })._cf_chl_opt !==
     "undefined";
 };
@@ -360,6 +370,25 @@ const looksChallenged = (response: PageContextResponse): boolean =>
 export const looksAnubisChallenged = (response: PageContextResponse): boolean =>
   response.body.includes('id="anubis_challenge"');
 
+/**
+ * Bot checks in front of Nitter instances, which answer a challenged fetch with
+ * their interstitial (Gandalf and r4fo as a 200, Shield as a 403). Like Anubis,
+ * a fetch never solves them: the page has to load and run its own script.
+ */
+const interstitialMarkers = [
+  "/.gandalf/", // Gandalf
+  "/__shield/", // Shield
+  "/.well-known/r4fo-check/", // r4fo's proof-of-work
+];
+
+export const looksInterstitialChallenged = (
+  response: PageContextResponse
+): boolean => {
+  if (looksAnubisChallenged(response)) return true;
+  const head = response.body.slice(0, 4000);
+  return interstitialMarkers.some((marker) => head.includes(marker));
+};
+
 const fetchInTab = async (
   tabId: number,
   url: string,
@@ -430,12 +459,13 @@ export const pageContextFetch = async (
   // Anubis guards paths, not the origin, so the tab loads the guarded url and
   // solves the check there. The same load rescues a fetch the parked page's
   // CSP refused: lobste.rs serves `connect-src 'none'` on its cached pages,
-  // the origin's landing page among them, but not on /search. Only a GET can
-  // be replayed as a navigation.
+  // the origin's landing page among them, but not on /search. It also re-earns
+  // a Nitter bot check's cookie once it lapses (Gandalf's lasted about two
+  // days). Only a GET can be replayed as a navigation.
   const method = (init?.method ?? "GET").toUpperCase();
   if (
     method === "GET" &&
-    (!result || "error" in result || looksAnubisChallenged(result))
+    (!result || "error" in result || looksInterstitialChallenged(result))
   ) {
     await closePageContext(origin);
     tabId = await openTab(origin, url);
