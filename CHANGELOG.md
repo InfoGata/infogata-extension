@@ -7,6 +7,14 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Firefox no longer asks for `scripting` or `declarativeNetRequest`.** Both
+  are Manifest V3 APIs that only the Chrome build calls; Firefox injects with
+  `tabs.executeScript` and rewrites headers with blocking `webRequest`. Dropping
+  them removes the "Block content on any page" install warning on Firefox.
+  Updating asks for nothing new.
+
 ## [1.6.1] — 2026-11-12
 
 ### Fixed

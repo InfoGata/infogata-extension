@@ -29,13 +29,18 @@ export default defineConfig({
   manifest: ({ browser }) => ({
     name: 'InfoGata Extension',
     description: 'Extension for Audiogata, Videogata, ReaderGata, and SocialGata',
+    // `scripting` and `declarativeNetRequest` are MV3 APIs: every call to them
+    // is behind `isMv3`. Firefox (MV2) injects with `tabs.executeScript`, which
+    // the host permission covers, and rewrites headers with blocking
+    // `webRequest`. Requesting them there would add an install warning for
+    // permissions nothing uses.
     permissions: [
       'storage',
       'tabs',
-      'scripting',
       'webRequest',
-      'declarativeNetRequest',
-      ...(browser === 'firefox' ? ['webRequestBlocking'] : []),
+      ...(browser === 'firefox'
+        ? ['webRequestBlocking']
+        : ['scripting', 'declarativeNetRequest']),
     ],
     host_permissions: ['<all_urls>'],
     action: {

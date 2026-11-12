@@ -49,7 +49,11 @@ directly.
 > closed once it goes unused. No tab is opened for any other site, and nothing
 > read there leaves the browser.
 
-### `scripting`
+### `scripting` (Chrome / MV3)
+
+Not requested on Firefox: MV2 makes the same injections with
+`tabs.executeScript`, which the host permission covers. The text below still
+describes what is injected on both browsers.
 
 > Injects the content script into origins the user has authorized, and injects
 > the small hook script into the page's main world so the InfoGata app can call
@@ -146,6 +150,10 @@ Privacy policy URL: link to `PRIVACY.md` on the repository, or a hosted copy.
 
 ## Firefox (AMO)
 
+The Firefox build requests `storage`, `tabs`, `webRequest`,
+`webRequestBlocking`, and `<all_urls>`. It does not request `scripting` or
+`declarativeNetRequest`; those are Chrome-only (see above).
+
 `browser_specific_settings.gecko.data_collection_permissions` is set to
 `{ required: ["none"] }`.
 
@@ -190,4 +198,7 @@ broad for what the extension does:
 > evaluates remote code itself. The frame carries no cookies in either
 > direction, and is removed when unused. Plugins pass only data (an origin from
 > a fixed list and a validated video id), never code.
+> The linter's one `innerHTML` warning is lit-html (the popup's template
+> library) cloning a `<template>` built from the static strings in our own
+> source; no external input reaches it.
 > Source: https://github.com/InfoGata/infogata-extension
