@@ -7,6 +7,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.6.2] — 2026-11-12
+
 ### Changed
 
 - **Firefox no longer asks for `scripting` or `declarativeNetRequest`.** Both
@@ -243,7 +245,8 @@ First release.
 - The extension's own `Origin` header is stripped from its requests to
   youtube.com, which otherwise rejects them.
 
-[Unreleased]: https://github.com/InfoGata/infogata-extension/compare/1.6.1...HEAD
+[Unreleased]: https://github.com/InfoGata/infogata-extension/compare/1.6.2...HEAD
+[1.6.2]: https://github.com/InfoGata/infogata-extension/compare/1.6.1...1.6.2
 [1.6.1]: https://github.com/InfoGata/infogata-extension/compare/1.6.0...1.6.1
 [1.6.0]: https://github.com/InfoGata/infogata-extension/compare/1.5.1...1.6.0
 [1.5.1]: https://github.com/InfoGata/infogata-extension/compare/1.5.0...1.5.1
