@@ -4,6 +4,7 @@ import {
   credentialPatternHost,
   hostFromUrl,
   hostMatchesPatternHost,
+  loginPageHosts,
   normalizeHost,
 } from "../src/credential-hosts";
 
@@ -151,7 +152,51 @@ describe("credentialHostFor", () => {
     ).toBeUndefined();
   });
 
+  it("nominates the completion page's host when sign-in lives elsewhere", () => {
+    const options = {
+      auth: {
+        loginUrl: "https://auth.example.com/self-service/login/browser",
+        completionUrl: "https://www.example.com/home/library?*",
+      },
+    };
+    expect(credentialHostFor("https://www.example.com/api/x", options)).toBe(
+      "www.example.com"
+    );
+    expect(credentialHostFor("https://auth.example.com/x", options)).toBe(
+      "auth.example.com"
+    );
+    expect(
+      credentialHostFor("https://other.example.com/x", options)
+    ).toBeUndefined();
+  });
+
   it("nominates nothing when no options are supplied at all", () => {
     expect(credentialHostFor("https://bandcamp.com/album/x")).toBeUndefined();
+  });
+});
+
+describe("loginPageHosts", () => {
+  it("lists where a login starts and ends, once each", () => {
+    expect(
+      loginPageHosts({
+        loginUrl: "https://auth.example.com/login",
+        completionUrl: "https://www.example.com/library?*",
+      })
+    ).toEqual(["auth.example.com", "www.example.com"]);
+    expect(
+      loginPageHosts({
+        loginUrl: "https://example.com/login",
+        completionUrl: "https://example.com/done",
+      })
+    ).toEqual(["example.com"]);
+  });
+
+  it("ignores a completion url that isn't http(s)", () => {
+    expect(
+      loginPageHosts({
+        loginUrl: "https://example.com/login",
+        completionUrl: "javascript:alert(1)",
+      })
+    ).toEqual(["example.com"]);
   });
 });

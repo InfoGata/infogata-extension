@@ -154,6 +154,11 @@ These are load-bearing; changing them changes what a hostile plugin can do.
   A plugin's `siteMatchPatterns` only *nominate* a host -- see
   `credentialHostFor` in `src/credential-hosts.ts`, which rejects wildcard hosts
   so a pattern cannot stand for every site at once.
+- A login's own hosts -- its `loginUrl`'s and its `completionUrl`'s, which
+  differ for a site whose sign-in is a separate service -- are named in the
+  login's consent prompt, and are the hosts its plugin's requests may then
+  carry cookies to (`loginPageHosts`). Any host added to that list has to be
+  added to the prompt too.
 - Redirect rules are bound to `sender.url`'s origin at registration, so a site
   cannot register a rule wearing another app's origin, and are capped per origin.
 - `buildRedirectUrl` resolves rather than concatenates: the popup displays

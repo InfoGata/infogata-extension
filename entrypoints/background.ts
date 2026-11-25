@@ -4,6 +4,7 @@ import {
   credentialHostFor,
   loadDevAutoConsent,
   hostFromUrl,
+  loginPageHosts,
   loadCredentialHosts,
   normalizeHost,
   storeCredentialHosts,
@@ -571,7 +572,9 @@ export default defineBackground(() => {
     // prompt, not just the one the window navigates to -- `domainHeadersToFind`
     // can reach sites the user never sees during the login.
     const captureHosts = [
-      loginHost,
+      // The login host, and the completion page's, which the plugin's
+      // requests are then allowed to use the login on.
+      ...loginPageHosts(auth),
       ...Object.keys(auth.domainHeadersToFind ?? {})
         .map((d) => normalizeHost(d.replace(/^\./, "")))
         .filter((h): h is string => !!h),
@@ -721,6 +724,18 @@ export default defineBackground(() => {
     const urlPatterns = auth.domainHeadersToFind
       ? Object.keys(auth.domainHeadersToFind).map((d) => `*://*${d}/*`)
       : [];
+    // A login that starts on a separate sign-in service ends back on the
+    // site, so its completion page is on another origin that has to be
+    // watched too, or the login is never seen to finish.
+    const completionHost = auth.completionUrl
+      ? hostFromUrl(auth.completionUrl)
+      : undefined;
+    if (completionHost) {
+      const completionOrigin = new URL(auth.completionUrl!).origin;
+      if (completionOrigin !== url.origin) {
+        urlPatterns.push(`${completionOrigin}/*`);
+      }
+    }
     const extraInfo: Browser.webRequest.OnBeforeSendHeadersOptions[] = [
       "requestHeaders" as Browser.webRequest.OnBeforeSendHeadersOptions
     ];

@@ -9,7 +9,7 @@
  */
 
 import { urlMatchesPattern } from "./redirect-utils";
-import type { NetworkRequestOptions } from "./types";
+import type { ManifestAuthentication, NetworkRequestOptions } from "./types";
 
 export type HostDecision = "allow" | "deny";
 
@@ -177,13 +177,28 @@ export const credentialHostFor = (
   }
 
   // The login flow's own domains, which the user approved when they signed in.
-  const loginUrl = options?.auth?.loginUrl;
-  if (loginUrl) {
-    const loginHost = hostFromUrl(loginUrl);
-    if (loginHost && loginHost === host) return host;
-    const domains = Object.keys(options?.auth?.domainHeadersToFind ?? {});
+  const auth = options?.auth;
+  if (auth?.loginUrl) {
+    if (loginPageHosts(auth).includes(host)) return host;
+    const domains = Object.keys(auth.domainHeadersToFind ?? {});
     if (domains.some((d) => host.endsWith(d))) return host;
   }
 
   return undefined;
+};
+
+/**
+ * The hosts a login window's pages are on: where it starts, and where it
+ * ends. They can differ -- a site whose sign-in lives on its own service
+ * (auth.example.com) sends the reader back to the site proper, and that is
+ * the host the plugin's requests then need the login for. A `completionUrl`
+ * may end in `?*`, which `URL` reads as a query and ignores.
+ */
+export const loginPageHosts = (
+  auth: Pick<ManifestAuthentication, "loginUrl" | "completionUrl">
+): string[] => {
+  const hosts = [auth.loginUrl, auth.completionUrl]
+    .map((url) => (url ? hostFromUrl(url) : undefined))
+    .filter((h): h is string => !!h);
+  return [...new Set(hosts)];
 };
