@@ -7,6 +7,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.7.0] — 2026-11-24
+
+### Added
+
+- **Logins that end on a different host than they start.** A plugin's
+  `completionUrl` host is now one of its login's own hosts, alongside its
+  `loginUrl`'s: it is named in the login's consent prompt, the login window
+  watches it, and the plugin's requests may carry cookies to it afterwards.
+  Sites whose sign-in is a separate service need this -- Humble Bundle signs in
+  on `auth.humblebundle.com` and returns to `www.humblebundle.com`. Before,
+  the window never saw such a login finish, and requests to the site went out
+  without the login.
+
 ## [1.6.2] — 2026-11-12
 
 ### Changed
@@ -245,7 +258,8 @@ First release.
 - The extension's own `Origin` header is stripped from its requests to
   youtube.com, which otherwise rejects them.
 
-[Unreleased]: https://github.com/InfoGata/infogata-extension/compare/1.6.2...HEAD
+[Unreleased]: https://github.com/InfoGata/infogata-extension/compare/1.7.0...HEAD
+[1.7.0]: https://github.com/InfoGata/infogata-extension/compare/1.6.2...1.7.0
 [1.6.2]: https://github.com/InfoGata/infogata-extension/compare/1.6.1...1.6.2
 [1.6.1]: https://github.com/InfoGata/infogata-extension/compare/1.6.0...1.6.1
 [1.6.0]: https://github.com/InfoGata/infogata-extension/compare/1.5.1...1.6.0
